@@ -258,7 +258,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
     <div id="detail-top">
       <div id="detail-cover">
         <div id="detail-cover-bg"><span id="detail-cover-num"></span></div>
-        <img id="detail-cover-img" src="" alt="" onload="this.classList.add('loaded')">
+        <img id="detail-cover-img" alt="" onload="this.classList.add('loaded')" onerror="this.classList.remove('loaded')">
       </div>
       <div id="detail-meta">
         <div id="detail-cat"></div>
@@ -441,11 +441,23 @@ async function processQueue() {
 }
 
 async function loadCover(albumId, imgEl) {
-  // 1. Try in-session blob URL
-  const cached = await getBlobUrl(albumId);
-  if (cached) { applySrc(imgEl, cached); return; }
+  // 1. Check in-session blob URL (already loaded this session)
+  if (blobUrlCache.has(albumId)) {
+    applySrc(imgEl, blobUrlCache.get(albumId));
+    return;
+  }
 
-  // 2. Look up mbid (from localStorage cache or fetch)
+  // 2. Check IndexedDB (offline cache — populated by "Cache all")
+  const blob = await idbGet(albumId);
+  if (blob) {
+    const url = URL.createObjectURL(blob);
+    blobUrlCache.set(albumId, url);
+    applySrc(imgEl, url);
+    return;
+  }
+
+  // 3. Load from network: resolve mbid → set img.src directly.
+  //    The browser handles HTTP redirects, caching, and CORS for <img> natively.
   let mbid = mbidCache[albumId];
   if (mbid === undefined) {
     mbid = await fetchMbid(albumId);
@@ -454,17 +466,8 @@ async function loadCover(albumId, imgEl) {
   }
   if (!mbid) return;
 
-  // 3. Fetch image blob
-  try {
-    const url = `https://coverartarchive.org/release/${mbid}/front-250`;
-    const resp = await fetch(url);
-    if (!resp.ok) return;
-    const blob = await resp.blob();
-    await idbPut(albumId, blob);
-    const objUrl = URL.createObjectURL(blob);
-    blobUrlCache.set(albumId, objUrl);
-    applySrc(imgEl, objUrl);
-  } catch(e) {}
+  const coverUrl = `https://coverartarchive.org/release/${mbid}/front-250`;
+  applySrc(imgEl, coverUrl);
 }
 
 async function fetchMbid(albumId) {
@@ -694,7 +697,7 @@ function renderGrid() {
         <div class="album-cover-bg" style="${getCoverStyle(a)}">
           <span class="album-cover-num">${esc(a.catalog)}</span>
         </div>
-        <img src="" alt="" data-album-id="${esc(a.id)}" onload="this.classList.add('loaded')">
+        <img alt="" data-album-id="${esc(a.id)}" onload="this.classList.add('loaded')" onerror="this.classList.remove('loaded')">
       </div>
       <div class="album-info">
         <div class="album-artist">${esc(a.artist)}</div>
@@ -840,7 +843,7 @@ async function openDetail(albumId) {
   const covNum = document.getElementById('detail-cover-num');
   covBg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;' + getCoverStyle(album);
   covNum.textContent = album.catalog;
-  covImg.src='';
+  covImg.removeAttribute('src');
   covImg.classList.remove('loaded');
 
   // Meta
