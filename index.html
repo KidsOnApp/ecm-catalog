@@ -79,9 +79,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 .album-card:hover{border-color:var(--border2);transform:translateY(-2px);
   box-shadow:0 6px 20px rgba(0,0,0,.5)}
 .album-cover{width:100%;aspect-ratio:1;position:relative;overflow:hidden}
-.album-cover img{width:100%;height:100%;object-fit:cover;display:block;
-  opacity:0;transition:opacity .4s}
-.album-cover img.loaded{opacity:1}
+.album-cover img{width:100%;height:100%;object-fit:cover;display:block}
 .album-cover-bg{position:absolute;inset:0;display:flex;align-items:center;
   justify-content:center}
 .album-cover-num{font-size:9px;color:rgba(255,255,255,.25);letter-spacing:.05em;
@@ -110,8 +108,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 #detail-panel::-webkit-scrollbar-thumb{background:var(--border2)}
 #detail-top{display:flex;gap:20px;padding:20px}
 #detail-cover{width:160px;min-width:160px;aspect-ratio:1;border-radius:4px;overflow:hidden;position:relative}
-#detail-cover img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s;position:absolute;inset:0}
-#detail-cover img.loaded{opacity:1}
+#detail-cover img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
 #detail-cover-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 #detail-cover-num{font-size:11px;color:rgba(255,255,255,.2);letter-spacing:.06em;font-weight:600}
 #detail-meta{flex:1}
@@ -258,7 +255,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
     <div id="detail-top">
       <div id="detail-cover">
         <div id="detail-cover-bg"><span id="detail-cover-num"></span></div>
-        <img id="detail-cover-img" alt="" onload="this.classList.add('loaded')">
+        <img id="detail-cover-img" alt="" onload="coverLoaded(this)">
       </div>
       <div id="detail-meta">
         <div id="detail-cat"></div>
@@ -710,7 +707,7 @@ function renderGrid() {
         <div class="album-cover-bg" style="${getCoverStyle(a)}">
           <span class="album-cover-num">${esc(a.catalog)}</span>
         </div>
-        <img alt="" data-album-id="${esc(a.id)}" onload="this.classList.add('loaded');coverLoaded(this)">
+        <img alt="" data-album-id="${esc(a.id)}" onload="coverLoaded(this)">
       </div>
       <div class="album-info">
         <div class="album-artist">${esc(a.artist)}</div>
@@ -857,7 +854,6 @@ async function openDetail(albumId) {
   covBg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;' + getCoverStyle(album);
   covNum.textContent = album.catalog;
   covImg.removeAttribute('src');
-  covImg.classList.remove('loaded');
 
   // Meta
   document.getElementById('detail-cat').textContent    = album.catalog;
@@ -910,7 +906,7 @@ async function openDetail(albumId) {
       return `<div class="related-card" onclick="openDetail('${esc(a.id)}')">
         <div class="related-cover">
           <div style="position:absolute;inset:0;${getCoverStyle(a)}"></div>
-          <img src="" data-album-id="${esc(a.id)}" onload="this.classList.add('loaded')">
+          <img src="" data-album-id="${esc(a.id)}" onload="coverLoaded(this)">
         </div>
         <div class="related-shared" title="${esc(r.shared.join(', '))}">via ${esc(shared)}</div>
         <div class="related-artist">${esc(a.artist)}</div>
