@@ -258,7 +258,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
     <div id="detail-top">
       <div id="detail-cover">
         <div id="detail-cover-bg"><span id="detail-cover-num"></span></div>
-        <img id="detail-cover-img" alt="" onload="this.classList.add('loaded')" onerror="this.classList.remove('loaded')">
+        <img id="detail-cover-img" alt="" onload="this.classList.add('loaded')">
       </div>
       <div id="detail-meta">
         <div id="detail-cat"></div>
@@ -467,7 +467,17 @@ async function loadCover(albumId, imgEl) {
   if (!mbid) return;
 
   const coverUrl = `https://coverartarchive.org/release/${mbid}/front-250`;
+  // Store network URL in blobUrlCache so re-renders can restore it immediately
+  blobUrlCache.set(albumId, coverUrl);
   applySrc(imgEl, coverUrl);
+}
+
+// Called by img onload — ensures the src survives any future re-renders
+function coverLoaded(img) {
+  const id = img.dataset.albumId;
+  if (id && img.src && !img.src.startsWith('data:') && img.src !== window.location.href) {
+    blobUrlCache.set(id, img.src);
+  }
 }
 
 async function fetchMbid(albumId) {
@@ -697,7 +707,7 @@ function renderGrid() {
         <div class="album-cover-bg" style="${getCoverStyle(a)}">
           <span class="album-cover-num">${esc(a.catalog)}</span>
         </div>
-        <img alt="" data-album-id="${esc(a.id)}" onload="this.classList.add('loaded')" onerror="this.classList.remove('loaded')">
+        <img alt="" data-album-id="${esc(a.id)}" onload="this.classList.add('loaded');coverLoaded(this)">
       </div>
       <div class="album-info">
         <div class="album-artist">${esc(a.artist)}</div>
@@ -1000,6 +1010,11 @@ async function init() {
     }
   });
   saveCollection();
+
+  // Pre-populate blobUrlCache from known mbids so covers survive re-renders
+  Object.entries(mbidCache).forEach(([id, mbid]) => {
+    if (mbid) blobUrlCache.set(id, `https://coverartarchive.org/release/${mbid}/front-250`);
+  });
 
   buildArtistIndex();
   buildDecadeButtons();
