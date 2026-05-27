@@ -443,7 +443,10 @@ async function processQueue() {
 async function loadCover(albumId, imgEl) {
   // 1. Check in-session blob URL (already loaded this session)
   if (blobUrlCache.has(albumId)) {
-    applySrc(imgEl, blobUrlCache.get(albumId));
+    // Only set src if not already pointing to this URL — prevents double-load
+    // restart caused by post-render loop + observer both calling applySrc
+    const cachedUrl = blobUrlCache.get(albumId);
+    if (imgEl.getAttribute('src') !== cachedUrl) applySrc(imgEl, cachedUrl);
     return;
   }
 
