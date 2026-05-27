@@ -79,7 +79,8 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 .album-card:hover{border-color:var(--border2);transform:translateY(-2px);
   box-shadow:0 6px 20px rgba(0,0,0,.5)}
 .album-cover{width:100%;aspect-ratio:1;position:relative;overflow:hidden}
-.album-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.album-cover img{width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;opacity:0;transition:opacity .4s}
+.album-cover img.loaded{opacity:1}
 .album-cover-bg{position:absolute;inset:0;display:flex;align-items:center;
   justify-content:center}
 .album-cover-num{font-size:9px;color:rgba(255,255,255,.25);letter-spacing:.05em;
@@ -255,7 +256,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
     <div id="detail-top">
       <div id="detail-cover">
         <div id="detail-cover-bg"><span id="detail-cover-num"></span></div>
-        <img id="detail-cover-img" alt="" onload="coverLoaded(this)">
+        <img id="detail-cover-img" alt="" onload="this.classList.add('loaded');coverLoaded(this)">
       </div>
       <div id="detail-meta">
         <div id="detail-cat"></div>
@@ -707,7 +708,7 @@ function renderGrid() {
         <div class="album-cover-bg" style="${getCoverStyle(a)}">
           <span class="album-cover-num">${esc(a.catalog)}</span>
         </div>
-        <img alt="" data-album-id="${esc(a.id)}" onload="coverLoaded(this)">
+        <img alt="" data-album-id="${esc(a.id)}" onload="this.classList.add('loaded');coverLoaded(this)">
       </div>
       <div class="album-info">
         <div class="album-artist">${esc(a.artist)}</div>
@@ -906,7 +907,7 @@ async function openDetail(albumId) {
       return `<div class="related-card" onclick="openDetail('${esc(a.id)}')">
         <div class="related-cover">
           <div style="position:absolute;inset:0;${getCoverStyle(a)}"></div>
-          <img src="" data-album-id="${esc(a.id)}" onload="coverLoaded(this)">
+          <img src="" data-album-id="${esc(a.id)}" onload="this.classList.add('loaded');coverLoaded(this)">
         </div>
         <div class="related-shared" title="${esc(r.shared.join(', '))}">via ${esc(shared)}</div>
         <div class="related-artist">${esc(a.artist)}</div>
