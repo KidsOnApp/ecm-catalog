@@ -144,6 +144,20 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 .musician-tag{background:var(--bg3);border:1px solid var(--border);color:var(--text2);
   padding:3px 9px;border-radius:12px;font-size:11px;cursor:pointer;transition:all .15s}
 .musician-tag:hover{border-color:var(--accent);color:var(--accent)}
+.mb-section-title{font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;
+  font-weight:600;padding:14px 0 8px;display:flex;align-items:center;gap:8px}
+.mb-status{font-size:10px;color:var(--text3);font-weight:400;letter-spacing:0;text-transform:none;opacity:.7}
+.mb-credits-list{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.mb-credit-row{display:flex;align-items:baseline;gap:6px;font-size:12px}
+.mb-credit-name{color:var(--text);font-weight:500;cursor:pointer;text-decoration:none}
+.mb-credit-name:hover{color:var(--accent)}
+.mb-credit-instr{color:var(--text3);font-size:11px}
+.mb-links-bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.mb-link{display:inline-flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text2);padding:4px 10px;border-radius:var(--radius);font-size:11px;
+  text-decoration:none;transition:all .15s;cursor:pointer}
+.mb-link:hover{border-color:var(--accent);color:var(--accent)}
+.mb-not-found{font-size:11px;color:var(--text3);font-style:italic}
 .related-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
 .related-card{background:var(--bg3);border:1px solid var(--border);border-radius:4px;
   padding:8px;cursor:pointer;transition:all .15s}
@@ -285,6 +299,11 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
         <div class="section-title">Musicisti</div>
         <div class="musician-list" id="musician-list"></div>
       </div>
+      <div id="mb-section" style="display:none">
+        <div class="mb-section-title">Crediti MusicBrainz <span id="mb-status" class="mb-status"></span></div>
+        <div id="mb-credits-list" class="mb-credits-list"></div>
+        <div id="mb-links-bar" class="mb-links-bar"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -319,8 +338,12 @@ const coverCache   = new Map();  // albumId → img element src already applied 
 
 async function openIDB() {
   return new Promise((resolve) => {
-    const req = indexedDB.open('ecm_cover_images', 1);
-    req.onupgradeneeded = e => { e.target.result.createObjectStore('covers'); };
+    const req = indexedDB.open('ecm_cover_images', 2);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('covers'))  db.createObjectStore('covers');
+      if (!db.objectStoreNames.contains('mb_data')) db.createObjectStore('mb_data');
+    };
     req.onsuccess = e => { idb = e.target.result; resolve(idb); };
     req.onerror   = () => { idb = null; resolve(null); };
   });
@@ -935,6 +958,143 @@ async function openDetail(albumId) {
   } else {
     enqueueCover(albumId, covImg);
   }
+
+  // Fetch MusicBrainz data
+  fetchMBData(album);
+}
+
+// ── MusicBrainz enrichment ──────────────────────────────────
+async function idbMBGet(key) {
+  if (!idb) return null;
+  return new Promise(resolve => {
+    try {
+      const tx = idb.transaction('mb_data','readonly');
+      const req = tx.objectStore('mb_data').get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror   = () => resolve(null);
+    } catch(e) { resolve(null); }
+  });
+}
+async function idbMBPut(key, data) {
+  if (!idb) return;
+  return new Promise(resolve => {
+    try {
+      const tx = idb.transaction('mb_data','readwrite');
+      tx.objectStore('mb_data').put(data, key);
+      tx.oncomplete = resolve;
+      tx.onerror    = resolve;
+    } catch(e) { resolve(); }
+  });
+}
+
+async function fetchMBData(album) {
+  const sec      = document.getElementById('mb-section');
+  const statusEl = document.getElementById('mb-status');
+  const creditEl = document.getElementById('mb-credits-list');
+  const linksEl  = document.getElementById('mb-links-bar');
+
+  sec.style.display = 'block';
+  statusEl.textContent = '⏳ caricamento…';
+  creditEl.innerHTML = '';
+  linksEl.innerHTML  = '';
+
+  // Check cache
+  const cacheKey = album.catalog;
+  const cached = await idbMBGet(cacheKey);
+  if (cached) { renderMBData(cached); return; }
+
+  // Search MusicBrainz — try full catalog then without suffix
+  const catFull  = album.catalog.trim();
+  const catShort = catFull.replace(/\s+(ST|S|LP|CD)$/i,'').trim();
+
+  let mbid = null;
+  for (const cat of [catFull, catShort]) {
+    const q = encodeURIComponent('catno:"' + cat + '" AND label:ECM');
+    try {
+      const res  = await fetch('https://musicbrainz.org/ws/2/release?query=' + q + '&fmt=json&limit=5');
+      const data = await res.json();
+      const hits = (data.releases || []);
+      const titleLow = album.title.toLowerCase().replace(/[^a-z0-9]/g,' ').trim();
+      let best = hits[0];
+      for (const h of hits) {
+        const hl = (h.title||'').toLowerCase().replace(/[^a-z0-9]/g,' ').trim();
+        if (hl === titleLow) { best = h; break; }
+      }
+      if (best) { mbid = best.id; break; }
+    } catch(e) { /* network */ }
+  }
+
+  if (!mbid) {
+    statusEl.textContent = '(non trovato)';
+    return;
+  }
+
+  // Fetch full release
+  let release = null;
+  try {
+    const r2 = await fetch(
+      'https://musicbrainz.org/ws/2/release/' + mbid +
+      '?inc=artist-credits+url-rels&fmt=json'
+    );
+    release = await r2.json();
+  } catch(e) {
+    statusEl.textContent = '(errore di rete)';
+    return;
+  }
+
+  // Artist credits
+  const credits = [];
+  const seen = new Set();
+  for (const ac of (release['artist-credit'] || [])) {
+    if (typeof ac === 'string') continue;
+    const art = ac.artist;
+    if (!art || seen.has(art.id)) continue;
+    seen.add(art.id);
+    credits.push({ name: art.name, mbid: art.id });
+  }
+
+  // URL relations
+  const urls = { musicbrainz: 'https://musicbrainz.org/release/' + mbid };
+  for (const rel of (release.relations || [])) {
+    const url = rel.url && rel.url.resource;
+    if (!url) continue;
+    if (url.includes('wikipedia.org')) urls.wikipedia = url;
+    else if (url.includes('discogs.com')) urls.discogs = url;
+  }
+
+  const mbData = { credits, urls, mbid };
+  await idbMBPut(cacheKey, mbData);
+  renderMBData(mbData);
+}
+
+function renderMBData(data) {
+  const sec      = document.getElementById('mb-section');
+  const statusEl = document.getElementById('mb-status');
+  const creditEl = document.getElementById('mb-credits-list');
+  const linksEl  = document.getElementById('mb-links-bar');
+
+  sec.style.display = 'block';
+  statusEl.textContent = '';
+
+  if (data.credits && data.credits.length) {
+    creditEl.innerHTML = data.credits.map(c =>
+      '<div class="mb-credit-row">' +
+      '<a class="mb-credit-name" href="https://musicbrainz.org/artist/' + c.mbid +
+      '" target="_blank" rel="noopener">' + esc(c.name) + '</a></div>'
+    ).join('');
+  } else {
+    creditEl.innerHTML = '<span class="mb-not-found">Crediti non disponibili</span>';
+  }
+
+  const linkDefs = [
+    { key:'wikipedia',   label:'📖 Wikipedia'   },
+    { key:'musicbrainz', label:'🎵 MusicBrainz' },
+    { key:'discogs',     label:'💿 Discogs'      }
+  ];
+  linksEl.innerHTML = linkDefs
+    .filter(l => data.urls && data.urls[l.key])
+    .map(l => '<a class="mb-link" href="' + esc(data.urls[l.key]) + '" target="_blank" rel="noopener">' + l.label + '</a>')
+    .join('');
 }
 
 function closeDetail(e) {
