@@ -158,6 +158,11 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
   text-decoration:none;transition:all .15s;cursor:pointer}
 .mb-link:hover{border-color:var(--accent);color:var(--accent)}
 .mb-not-found{font-size:11px;color:var(--text3);font-style:italic}
+#cover-preview{position:fixed;z-index:9999;pointer-events:none;display:none;
+  width:280px;height:280px;border-radius:8px;object-fit:cover;
+  box-shadow:0 12px 48px rgba(0,0,0,.85);border:1px solid rgba(255,255,255,.08);
+  transition:opacity .15s;opacity:0}
+#cover-preview.visible{opacity:1}
 .related-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
 .related-card{background:var(--bg3);border:1px solid var(--border);border-radius:4px;
   padding:8px;cursor:pointer;transition:all .15s}
@@ -265,6 +270,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 </div>
 
 <!-- DETAIL OVERLAY -->
+<img id="cover-preview" alt="">
 <div id="detail-overlay" onclick="closeDetail(event)">
   <div id="detail-panel">
     <div id="detail-top">
@@ -584,6 +590,72 @@ function applySrc(imgEl, src) {
   if (!imgEl || !imgEl.isConnected) return;
   imgEl.src = src;
 }
+
+// ── Hover cover preview ──────────────────────────────────────
+(function() {
+  const preview = document.getElementById('cover-preview');
+  let activeCard = null;
+  let hideTimer  = null;
+
+  function largeUrl(src) {
+    if (!src) return null;
+    // CAA: upgrade from 250 to full size
+    if (src.includes('coverartarchive.org')) {
+      return src.replace(/\/front-\d+$/, '/front').replace(/\/front-\d+\?/, '/front?');
+    }
+    // iTunes: already 600x600
+    return src;
+  }
+
+  function showPreview(card, e) {
+    const img = card.querySelector('.album-cover img');
+    if (!img || !img.src || img.src.startsWith('data:')) return;
+    const big = largeUrl(img.src);
+    if (!big) return;
+
+    clearTimeout(hideTimer);
+    if (preview.dataset.src !== big) {
+      preview.dataset.src = big;
+      preview.classList.remove('visible');
+      preview.src = big;
+      preview.onload = () => preview.classList.add('visible');
+    } else {
+      preview.classList.add('visible');
+    }
+    preview.style.display = 'block';
+    positionPreview(card, e);
+    activeCard = card;
+  }
+
+  function positionPreview(card, e) {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const pw = 290, ph = 290;
+    const rect = card.getBoundingClientRect();
+    let x = rect.right + 12;
+    let y = rect.top;
+    if (x + pw > vw - 8) x = rect.left - pw - 12;
+    if (y + ph > vh - 8) y = vh - ph - 8;
+    if (y < 8) y = 8;
+    preview.style.left = x + 'px';
+    preview.style.top  = y + 'px';
+  }
+
+  function hidePreview() {
+    hideTimer = setTimeout(() => {
+      preview.classList.remove('visible');
+      setTimeout(() => { if (!preview.classList.contains('visible')) preview.style.display = 'none'; }, 160);
+      activeCard = null;
+    }, 80);
+  }
+
+  const grid = document.getElementById('album-grid');
+  grid.addEventListener('mouseover', e => {
+    const card = e.target.closest('.album-card');
+    if (card && card !== activeCard) showPreview(card, e);
+    else if (!card) hidePreview();
+  });
+  grid.addEventListener('mouseleave', hidePreview);
+})();
 
 // ═══════════════════════════════════════════════════════════
 //  COVER CACHE STATS
