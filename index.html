@@ -413,11 +413,11 @@ async function getBlobUrl(albumId) {
 function loadStorage() {
   try { collection = JSON.parse(localStorage.getItem('ecm_collection_v2') || '{}'); } catch(e){ collection={}; }
   try { wishlist   = JSON.parse(localStorage.getItem('ecm_wishlist_v1')    || '{}'); } catch(e){ wishlist={}; }
-  try { mbidCache  = JSON.parse(localStorage.getItem('ecm_mbid_v1')        || '{}'); } catch(e){ mbidCache={}; }
+  try { mbidCache  = JSON.parse(localStorage.getItem('ecm_mbid_v2')        || '{}'); } catch(e){ mbidCache={}; }
 }
 function saveCollection() { localStorage.setItem('ecm_collection_v2', JSON.stringify(collection)); }
 function saveWishlist()   { localStorage.setItem('ecm_wishlist_v1',    JSON.stringify(wishlist)); }
-function saveMbidCache()  { localStorage.setItem('ecm_mbid_v1',        JSON.stringify(mbidCache)); }
+function saveMbidCache()  { localStorage.setItem('ecm_mbid_v2',        JSON.stringify(mbidCache)); }
 
 // ═══════════════════════════════════════════════════════════
 //  ARTIST INDEX
@@ -516,18 +516,33 @@ async function loadCover(albumId, imgEl) {
   }
 
   if (mbid) {
-    const coverUrl = 'https://coverartarchive.org/release/' + mbid + '/front-250';
-    // On CAA error (404 / no image), fall back to iTunes
-    imgEl.onerror = async () => {
-      imgEl.onerror = null;
-      const itunesUrl = await fetchItunesCover(albumId);
-      if (itunesUrl) {
-        blobUrlCache.set(albumId, itunesUrl);
-        applySrc(imgEl, itunesUrl);
+    // Build a list of CAA URLs to try, in priority order:
+    // 1. Release-group (covers any version of the album — best coverage)
+    // 2. Individual release MBIDs (up to 5)
+    const result = mbid; // may be { mbid, rgMbid, allMbids } or legacy string
+    const isObj  = result && typeof result === 'object';
+    const primaryMbid = isObj ? result.mbid    : result;
+    const rgMbid      = isObj ? result.rgMbid  : null;
+    const allMbids    = isObj ? result.allMbids : [result];
+
+    const urlsToTry = [];
+    if (rgMbid) urlsToTry.push('https://coverartarchive.org/release-group/' + rgMbid + '/front-250');
+    allMbids.forEach(id => urlsToTry.push('https://coverartarchive.org/release/' + id + '/front-250'));
+
+    async function tryCoverUrls(urls) {
+      if (!urls.length) {
+        // All CAA options exhausted — try iTunes
+        const itunesUrl = await fetchItunesCover(albumId);
+        if (itunesUrl) { blobUrlCache.set(albumId, itunesUrl); applySrc(imgEl, itunesUrl); }
+        return;
       }
-    };
-    blobUrlCache.set(albumId, coverUrl);
-    applySrc(imgEl, coverUrl);
+      const [head, ...tail] = urls;
+      imgEl.onerror = () => { imgEl.onerror = null; tryCoverUrls(tail); };
+      blobUrlCache.set(albumId, head);
+      applySrc(imgEl, head);
+    }
+
+    tryCoverUrls(urlsToTry);
   } else {
     // MB didn't find the album — go straight to iTunes
     const itunesUrl = await fetchItunesCover(albumId);
@@ -552,12 +567,16 @@ async function fetchMbid(albumId) {
   if (!m) return null;
   const num = m[1];
   try {
-    const url = `https://musicbrainz.org/ws/2/release?query=catno:%22ECM%20${num}%22&limit=3&fmt=json`;
+    // Include release-groups so we get the rg MBID for broader cover lookup
+    const url = `https://musicbrainz.org/ws/2/release?query=catno:%22ECM%20${num}%22&limit=5&fmt=json&inc=release-groups`;
     const r = await fetch(url, {headers:{'User-Agent':'ECMCatalogApp/1.0 (ale.michetti@gmail.com)'}});
     if (!r.ok) return null;
     const data = await r.json();
     if (!data.releases || !data.releases.length) return null;
-    return data.releases[0].id;
+    const best = data.releases[0];
+    const rgMbid = (best['release-group'] && best['release-group'].id) || null;
+    const allMbids = data.releases.map(r => r.id);
+    return { mbid: best.id, rgMbid, allMbids };
   } catch(e) { return null; }
 }
 
