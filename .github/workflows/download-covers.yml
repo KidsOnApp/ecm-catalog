@@ -1,0 +1,28 @@
+name: Download ECM Covers
+
+on:
+  workflow_dispatch:   # solo manuale — clicca "Run workflow" su GitHub Actions
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360   # max 6 ore (1568 album ~2h)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download and upload covers to Supabase
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python download_covers.py
+
+      - name: Summary
+        if: always()
+        run: echo "Workflow completato. Controlla i log per vedere quante copertine sono state caricate."
