@@ -90,11 +90,23 @@ def sb_request(method, path, sb_url, sb_key, body=None, extra_headers=None):
 
 
 def sb_get_albums(sb_url, sb_key, only_missing=True):
-    """Legge album dal DB. Se only_missing=True, solo quelli senza copertina."""
+    """Legge album dal DB con paginazione (PostgREST max 1000 righe per chiamata)."""
     filter_q = '&cover_ok=eq.false' if only_missing else ''
-    path = f'/rest/v1/albums?select=id,catalog,artist,title,mbid,rg_mbid{filter_q}&order=catalog&limit=2000'
-    result = sb_request('GET', path, sb_url, sb_key, extra_headers={'Prefer': 'return=representation'})
-    return result if isinstance(result, list) else []
+    all_albums = []
+    page_size = 1000
+    offset = 0
+    while True:
+        path = (f'/rest/v1/albums?select=id,catalog,artist,title,mbid,rg_mbid'
+                f'{filter_q}&order=catalog&limit={page_size}&offset={offset}')
+        batch = sb_request('GET', path, sb_url, sb_key,
+                           extra_headers={'Prefer': 'return=representation'})
+        if not isinstance(batch, list) or not batch:
+            break
+        all_albums.extend(batch)
+        if len(batch) < page_size:
+            break
+        offset += page_size
+    return all_albums
 
 
 def sb_update_album(sb_url, sb_key, album_id, cover_url, cover_ok):
