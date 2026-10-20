@@ -81,18 +81,44 @@ def latest_year(albums):
 
 
 # ── MusicBrainz helpers ────────────────────────────────────────────────────
+
+# ECM Records MBID on MusicBrainz — stable permanent identifier.
+# Source: https://musicbrainz.org/label/0538c84c-a5ab-4dbe-a47e-2f60bdc8d7cb
+ECM_LABEL_MBID = '0538c84c-a5ab-4dbe-a47e-2f60bdc8d7cb'
+
 def get_ecm_label_mbid():
-    """Search for ECM Records label and return its MBID."""
-    print('Searching for ECM Records label on MusicBrainz…')
+    """
+    Return ECM Records MBID. Uses hardcoded value (stable) and verifies it
+    with MusicBrainz as a sanity check; falls back to search if it fails.
+    """
+    # Quick verify that the hardcoded MBID still resolves
+    print(f'Verifying ECM Records MBID: {ECM_LABEL_MBID}…')
     time.sleep(RATE_LIMIT)
-    data = mb_get('/label', {'query': 'label:"ECM Records" AND country:DE', 'fmt': 'json', 'limit': 5})
-    if not data:
-        return None
-    for label in data.get('labels', []):
-        name = label.get('name', '')
-        if 'ECM' in name.upper():
-            print(f'  Found: {name} — MBID: {label["id"]}')
-            return label['id']
+    data = mb_get(f'/label/{ECM_LABEL_MBID}', {'fmt': 'json'})
+    if data and 'ECM' in (data.get('name', '') or '').upper():
+        print(f'  Confirmed: {data["name"]} — MBID: {ECM_LABEL_MBID}')
+        return ECM_LABEL_MBID
+
+    # Fallback: search by name with multiple queries
+    print('  Hardcoded MBID failed, falling back to search…')
+    search_queries = [
+        'label:"ECM Records" AND country:DE',
+        'label:"ECM Records"',
+        'label:ECM AND country:DE',
+    ]
+    for query in search_queries:
+        time.sleep(RATE_LIMIT)
+        data = mb_get('/label', {'query': query, 'fmt': 'json', 'limit': 10})
+        if not data:
+            continue
+        labels = data.get('labels', [])
+        print(f'  Search "{query}" → {len(labels)} result(s)')
+        for label in labels:
+            name = label.get('name', '')
+            if 'ECM' in name.upper():
+                print(f'  Found via search: {name} — MBID: {label["id"]}')
+                return label['id']
+
     return None
 
 
