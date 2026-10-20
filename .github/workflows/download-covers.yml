@@ -17,6 +17,36 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Verify secrets are set
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "ERRORE: Il secret SUPABASE_URL non è impostato!"
+            echo "Vai su Settings → Secrets and variables → Actions e crea il secret."
+            exit 1
+          else
+            echo "SUPABASE_URL è impostato (lunghezza: ${#SUPABASE_URL} caratteri)"
+            echo "Valore (mascherato): ${SUPABASE_URL:0:8}...${SUPABASE_URL: -10}"
+          fi
+          if [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            echo "ERRORE: Il secret SUPABASE_SERVICE_KEY non è impostato!"
+            exit 1
+          else
+            echo "SUPABASE_SERVICE_KEY è impostato (lunghezza: ${#SUPABASE_SERVICE_KEY} caratteri)"
+          fi
+
+      - name: Test connessione Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          HOST=$(echo "$SUPABASE_URL" | sed 's|https\?://||' | sed 's|/.*||')
+          echo "Testo DNS per: $HOST"
+          nslookup "$HOST" || echo "nslookup fallito"
+          curl -s --max-time 10 -o /dev/null -w "HTTP status: %{http_code}\n" "$SUPABASE_URL/rest/v1/" \
+            -H "apikey: placeholder" || echo "curl fallito"
+
       - name: Download and upload covers to Supabase
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
