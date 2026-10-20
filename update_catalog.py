@@ -23,21 +23,38 @@ INDEX_FILE = 'index.html'
 MB_BASE    = 'https://musicbrainz.org/ws/2'
 USER_AGENT = 'ECMCatalogUpdater/1.0 (ale.michetti@gmail.com)'
 RATE_LIMIT  = 1.1   # seconds between requests (MB allows 1/sec)
+MAX_RETRIES = 4     # retry up to 4 times on 503/429
+RETRY_WAIT  = [5, 15, 30, 60]  # seconds to wait before each retry
 
 
 # ── HTTP helper ────────────────────────────────────────────────────────────
 def mb_get(path, params=None):
-    """GET from MusicBrainz API, returns parsed JSON."""
+    """GET from MusicBrainz API, returns parsed JSON. Retries on 503/429."""
     if params:
         path += '?' + urllib.parse.urlencode(params)
     url = MB_BASE + path
     req = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            return json.loads(r.read().decode())
-    except Exception as e:
-        print(f'  [warn] MB request failed: {url} — {e}')
-        return None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 503) and attempt < MAX_RETRIES:
+                wait = RETRY_WAIT[attempt]
+                print(f'  [retry {attempt+1}/{MAX_RETRIES}] HTTP {e.code} — waiting {wait}s before retry…')
+                time.sleep(wait)
+                continue
+            print(f'  [warn] MB request failed: {url} — HTTP {e.code} {e.reason}')
+            return None
+        except Exception as e:
+            if attempt < MAX_RETRIES:
+                wait = RETRY_WAIT[attempt]
+                print(f'  [retry {attempt+1}/{MAX_RETRIES}] {e} — waiting {wait}s…')
+                time.sleep(wait)
+                continue
+            print(f'  [warn] MB request failed: {url} — {e}')
+            return None
+    return None
 
 
 # ── Parse existing catalog from index.html ─────────────────────────────────
