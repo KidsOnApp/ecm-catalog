@@ -194,6 +194,13 @@ def main():
         print('ERRORE: --url e --key sono obbligatori (o variabili SUPABASE_URL / SUPABASE_SERVICE_KEY)')
         sys.exit(1)
 
+    # Debug: verifica URL (stampa prefisso/suffisso senza esporre il key)
+    url_repr = repr(args.url)
+    print(f'DEBUG SUPABASE_URL: lunghezza={len(args.url)}, valore={args.url[:12]}...{args.url[-8:]}')
+    print(f'DEBUG repr: {url_repr[:60]}')
+    if not args.url.startswith('https://'):
+        print('ATTENZIONE: SUPABASE_URL non inizia con https:// !')
+
     only_missing = not args.all
     print(f'Leggo album dal database{"" if only_missing else " (tutti)"}…')
     albums = sb_get_albums(args.url, args.key, only_missing=only_missing)
