@@ -78,15 +78,31 @@ def sb_request(method, path, sb_url, sb_key, body=None, extra_headers=None):
     data = body if isinstance(body, bytes) else (json.dumps(body).encode() if body else None)
     if data and 'Content-Type' not in headers:
         headers['Content-Type'] = 'application/json'
-    req = urllib.request.Request(url, data=data, method=method, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            raw = r.read()
-            return json.loads(raw) if raw else True
-    except urllib.error.HTTPError as e:
-        msg = e.read().decode('utf-8', errors='replace')
-        print(f'    [SB error {e.code}] {msg[:200]}')
-        return None
+
+    for attempt in range(MAX_RETRY):
+        req = urllib.request.Request(url, data=data, method=method, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                raw = r.read()
+                return json.loads(raw) if raw else True
+        except urllib.error.HTTPError as e:
+            msg = e.read().decode('utf-8', errors='replace')
+            if e.code in (429, 503) and attempt < MAX_RETRY - 1:
+                w = RETRY_WAIT[attempt]
+                print(f'    [SB retry {attempt+1}] HTTP {e.code} — attendo {w}s…')
+                time.sleep(w)
+                continue
+            print(f'    [SB error {e.code}] {msg[:200]}')
+            return None
+        except Exception as e:
+            if attempt < MAX_RETRY - 1:
+                w = RETRY_WAIT[attempt]
+                print(f'    [SB retry {attempt+1}] {e} — attendo {w}s…')
+                time.sleep(w)
+                continue
+            print(f'    [SB error] {e}')
+            return None
+    return None
 
 
 def sb_get_albums(sb_url, sb_key, only_missing=True):
