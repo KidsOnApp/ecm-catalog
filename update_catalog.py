@@ -1,306 +1,161 @@
 #!/usr/bin/env python3
 """
-ECM Catalog Updater
--------------------
-Queries MusicBrainz for new ECM Records releases and adds them to index.html.
+update_catalog.py (versione Supabase)
+-------------------------------------
+Cerca su MusicBrainz le nuove uscite ECM e le inserisce nella tabella `albums`
+di Supabase. Gli album già presenti non vengono toccati.
+Copertine e musicisti vengono poi completati da download_covers.py e
+enrich_musicians.py (eseguiti dallo stesso workflow).
 
-Usage:
-  python update_catalog.py [--dry-run]
-
-Requires only the Python standard library (no pip install needed).
+Uso:  python update_catalog.py [--dry-run]
+Env:  SUPABASE_URL, SUPABASE_SERVICE_KEY
 """
+import json, os, re, sys, time
+import urllib.error, urllib.parse, urllib.request
 
-import json
-import re
-import sys
-import time
-import urllib.parse
-import urllib.request
-from datetime import datetime
-
-DRY_RUN    = '--dry-run' in sys.argv
-INDEX_FILE = 'index.html'
-MB_BASE    = 'https://musicbrainz.org/ws/2'
-USER_AGENT = 'ECMCatalogUpdater/1.0 (ale.michetti@gmail.com)'
-RATE_LIMIT  = 1.1   # seconds between requests (MB allows 1/sec)
-MAX_RETRIES = 4     # retry up to 4 times on 503/429
-RETRY_WAIT  = [5, 15, 30, 60]  # seconds to wait before each retry
-
-
-# ── HTTP helper ────────────────────────────────────────────────────────────
-def mb_get(path, params=None):
-    """GET from MusicBrainz API, returns parsed JSON. Retries on 503/429."""
-    if params:
-        path += '?' + urllib.parse.urlencode(params)
-    url = MB_BASE + path
-    req = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                return json.loads(r.read().decode())
-        except urllib.error.HTTPError as e:
-            if e.code in (429, 503) and attempt < MAX_RETRIES:
-                wait = RETRY_WAIT[attempt]
-                print(f'  [retry {attempt+1}/{MAX_RETRIES}] HTTP {e.code} — waiting {wait}s before retry…')
-                time.sleep(wait)
-                continue
-            print(f'  [warn] MB request failed: {url} — HTTP {e.code} {e.reason}')
-            return None
-        except Exception as e:
-            if attempt < MAX_RETRIES:
-                wait = RETRY_WAIT[attempt]
-                print(f'  [retry {attempt+1}/{MAX_RETRIES}] {e} — waiting {wait}s…')
-                time.sleep(wait)
-                continue
-            print(f'  [warn] MB request failed: {url} — {e}')
-            return None
-    return None
-
-
-# ── Parse existing catalog from index.html ─────────────────────────────────
-def load_albums(html):
-    """Extract the ALBUMS array from index.html. Returns (albums_list, prefix, suffix)."""
-    m = re.search(r'const ALBUMS = (\[.*?\]);', html, re.DOTALL)
-    if not m:
-        raise ValueError('Could not find ALBUMS array in index.html')
-    prefix = html[:m.start(1)]
-    suffix = html[m.end(1):]
-    albums = json.loads(m.group(1))
-    return albums, prefix, suffix
-
-
-def known_catalogs(albums):
-    """Return set of catalog numbers already in the list, normalised."""
-    return {a['catalog'].strip().upper() for a in albums}
-
-
-def latest_year(albums):
-    """Return the most recent year present in the catalog."""
-    years = [int(a['year']) for a in albums if a.get('year') and str(a['year']).isdigit()]
-    return max(years) if years else 2020
-
-
-# ── MusicBrainz helpers ────────────────────────────────────────────────────
-
-# ECM Records MBID on MusicBrainz — stable permanent identifier.
-# Source: https://musicbrainz.org/label/0538c84c-a5ab-4dbe-a47e-2f60bdc8d7cb
+DRY_RUN = '--dry-run' in sys.argv
+SB_URL = (os.environ.get('SUPABASE_URL') or '').strip().rstrip('/')
+SB_KEY = (os.environ.get('SUPABASE_SERVICE_KEY') or '').strip()
+MB = 'https://musicbrainz.org/ws/2'
+UA = 'ECMCatalogUpdater/2.0 (ale.michetti@gmail.com)'
+RATE = 1.1
+WAITS = [5, 15, 30, 60]
 ECM_LABEL_MBID = '0538c84c-a5ab-4dbe-a47e-2f60bdc8d7cb'
 
-def get_ecm_label_mbid():
-    """
-    Return ECM Records MBID. Uses hardcoded value (stable) and verifies it
-    with MusicBrainz as a sanity check; falls back to search if it fails.
-    """
-    # Quick verify that the hardcoded MBID still resolves
-    print(f'Verifying ECM Records MBID: {ECM_LABEL_MBID}…')
-    time.sleep(RATE_LIMIT)
-    data = mb_get(f'/label/{ECM_LABEL_MBID}', {'fmt': 'json'})
-    if data and 'ECM' in (data.get('name', '') or '').upper():
-        print(f'  Confirmed: {data["name"]} — MBID: {ECM_LABEL_MBID}')
-        return ECM_LABEL_MBID
 
-    # Fallback: search by name with multiple queries
-    print('  Hardcoded MBID failed, falling back to search…')
-    search_queries = [
-        'label:"ECM Records" AND country:DE',
-        'label:"ECM Records"',
-        'label:ECM AND country:DE',
-    ]
-    for query in search_queries:
-        time.sleep(RATE_LIMIT)
-        data = mb_get('/label', {'query': query, 'fmt': 'json', 'limit': 10})
-        if not data:
-            continue
-        labels = data.get('labels', [])
-        print(f'  Search "{query}" → {len(labels)} result(s)')
-        for label in labels:
-            name = label.get('name', '')
-            if 'ECM' in name.upper():
-                print(f'  Found via search: {name} — MBID: {label["id"]}')
-                return label['id']
-
-    return None
+def http_json(url, headers, method='GET', body=None):
+    data = json.dumps(body).encode() if body is not None else None
+    for i in range(len(WAITS) + 1):
+        req = urllib.request.Request(url, data=data, method=method, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                raw = r.read()
+                return json.loads(raw) if raw else True
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 502, 503) and i < len(WAITS):
+                print(f'  [retry] HTTP {e.code}, attendo {WAITS[i]}s')
+                time.sleep(WAITS[i]); continue
+            print(f'  [warn] HTTP {e.code} {url[:90]} {e.read()[:150]!r}')
+            return None
+        except Exception as e:
+            if i < len(WAITS):
+                time.sleep(WAITS[i]); continue
+            print(f'  [warn] {e}')
+            return None
 
 
-def fetch_label_releases(label_mbid, from_year):
-    """
-    Paginate through all releases for the ECM label,
-    returning only those from from_year onwards.
-    """
-    print(f'Fetching releases from MusicBrainz (from {from_year})…')
-    releases = []
-    offset   = 0
-    limit    = 100
+def mb_get(path, params):
+    time.sleep(RATE)
+    return http_json(f'{MB}{path}?{urllib.parse.urlencode(dict(params, fmt="json"))}', {'User-Agent': UA})
 
+
+def sb(method, path, body=None, extra=None):
+    h = {'apikey': SB_KEY, 'Authorization': f'Bearer {SB_KEY}', 'Content-Type': 'application/json'}
+    h.update(extra or {})
+    return http_json(SB_URL + path, h, method, body)
+
+
+def load_existing():
+    rows, off = [], 0
     while True:
-        time.sleep(RATE_LIMIT)
-        data = mb_get('/release', {
-            'label':  label_mbid,
-            'fmt':    'json',
-            'limit':  limit,
-            'offset': offset,
-            'inc':    'labels+artist-credits',
-        })
-        if not data:
+        b = sb('GET', f'/rest/v1/albums?select=catalog,year&order=catalog&limit=1000&offset={off}')
+        if not isinstance(b, list) or not b:
             break
-
-        batch = data.get('releases', [])
-        if not batch:
+        rows += b
+        if len(b) < 1000:
             break
-
-        for rel in batch:
-            date = rel.get('date', '') or ''
-            year_str = date[:4] if date else ''
-            if year_str.isdigit() and int(year_str) >= from_year:
-                releases.append(rel)
-
-        total = data.get('release-count', 0)
-        offset += limit
-        print(f'  Fetched {min(offset, total)}/{total}…')
-        if offset >= total:
-            break
-
-    return releases
-
-
-# ── Catalog number helpers ─────────────────────────────────────────────────
-def extract_catalog_number(release):
-    """Return the best ECM catalog number for a release, or None."""
-    for li in release.get('label-info', []):
-        cat = (li.get('catalog-number') or '').strip()
-        label_name = (li.get('label', {}) or {}).get('name', '') or ''
-        if cat and 'ECM' in label_name.upper():
-            return cat
-    # Fallback: any catalog number that starts with ECM
-    for li in release.get('label-info', []):
-        cat = (li.get('catalog-number') or '').strip()
-        if cat.upper().startswith('ECM') or cat.upper().startswith('JAPO'):
-            return cat
-    return None
+        off += 1000
+    return rows
 
 
 def guess_series(catalog):
-    """Derive series name from catalog number (e.g. ECM 2700 → 'ECM 2')."""
     cat = catalog.upper()
     if cat.startswith('JAPO'):
         return 'JAPO'
     m = re.match(r'ECM\s*(\d+)', cat)
     if m:
-        num = int(m.group(1))
-        if num >= 2000:
-            return 'ECM 2'
-        elif num >= 1000:
-            return 'ECM 1'
-        else:
-            return 'ECM New Series'
-    if 'NEW SERIES' in cat:
-        return 'ECM New Series'
-    return ''
+        n = int(m.group(1))
+        return 'ECM 2' if n >= 2000 else 'ECM 1' if n >= 1000 else 'ECM New Series'
+    return 'ECM New Series' if 'NEW SERIES' in cat else ''
 
 
-def build_album(release, catalog):
-    """Convert a MusicBrainz release to our album object format."""
-    date     = release.get('date', '') or ''
-    year_str = date[:4] if len(date) >= 4 else ''
+def catalog_number(rel):
+    for li in rel.get('label-info', []):
+        cat = (li.get('catalog-number') or '').strip()
+        if cat and 'ECM' in ((li.get('label') or {}).get('name', '') or '').upper():
+            return cat
+    for li in rel.get('label-info', []):
+        cat = (li.get('catalog-number') or '').strip()
+        if cat.upper().startswith(('ECM', 'JAPO')):
+            return cat
+    return None
 
-    # Artist name
-    artist_credits = release.get('artist-credit', [])
-    artist_parts   = []
-    artist_list    = []
-    for ac in artist_credits:
-        if isinstance(ac, str):
-            artist_parts.append(ac)
-        else:
-            name = (ac.get('artist') or {}).get('name') or ac.get('name', '')
-            if name:
-                artist_list.append(name)
-                artist_parts.append(name + (ac.get('joinphrase') or ''))
-    artist_str = ''.join(artist_parts).strip(' ,/')
-    if not artist_str and artist_list:
-        artist_str = ' / '.join(artist_list)
 
+def build_row(rel, catalog):
+    year = (rel.get('date') or '')[:4]
+    names, parts = [], []
+    for ac in rel.get('artist-credit', []):
+        if isinstance(ac, dict):
+            n = (ac.get('artist') or {}).get('name') or ac.get('name', '')
+            if n:
+                names.append(n)
+                parts.append(n + (ac.get('joinphrase') or ''))
     return {
-        'id':          catalog,
-        'catalog':     catalog,
-        'year':        year_str,
-        'artist':      artist_str,
-        'artistList':  artist_list,
-        'title':       release.get('title', '').strip(),
-        'notes':       '',
-        'series':      guess_series(catalog),
-        'musicians':   '',
-        'musicianList': [],
-        'owned':       None,
-        'sheet':       '',
+        'id': catalog, 'catalog': catalog, 'year': year or None,
+        'artist': ''.join(parts).strip(' ,/') or ' / '.join(names),
+        'artist_list': names, 'title': (rel.get('title') or '').strip(),
+        'notes': '', 'series': guess_series(catalog),
+        'musicians': '', 'musician_list': [],
+        'cover_url': None, 'cover_ok': False,
+        'mbid': rel.get('id'), 'rg_mbid': None,
     }
 
 
-# ── Main ───────────────────────────────────────────────────────────────────
 def main():
-    # Load current index.html
-    try:
-        with open(INDEX_FILE, encoding='utf-8') as f:
-            html = f.read()
-    except FileNotFoundError:
-        print(f'ERROR: {INDEX_FILE} not found. Run this script from the repo root.')
-        sys.exit(1)
+    if not SB_URL or not SB_KEY:
+        sys.exit('ERRORE: servono SUPABASE_URL e SUPABASE_SERVICE_KEY')
+    existing_rows = load_existing()
+    if not existing_rows:
+        sys.exit('ERRORE: impossibile leggere gli album da Supabase')
+    existing = {r['catalog'].strip().upper() for r in existing_rows}
+    years = [int(r['year']) for r in existing_rows if str(r.get('year') or '').isdigit()]
+    from_year = max(years) if years else 2020
+    print(f'Catalogo: {len(existing_rows)} album, ultimo anno {from_year}')
 
-    albums, prefix, suffix = load_albums(html)
-    existing = known_catalogs(albums)
-    from_year = latest_year(albums)
+    new, offset = {}, 0
+    while True:
+        d = mb_get('/release', {'label': ECM_LABEL_MBID, 'limit': 100, 'offset': offset,
+                                'inc': 'labels+artist-credits'})
+        if not d or not d.get('releases'):
+            break
+        for rel in d['releases']:
+            y = (rel.get('date') or '')[:4]
+            if not (y.isdigit() and int(y) >= from_year):
+                continue
+            cat = catalog_number(rel)
+            if not cat or cat.strip().upper() in existing or cat in new:
+                continue
+            row = build_row(rel, cat)
+            if row['title']:
+                new[cat] = row
+                print(f'  + {cat} — {row["artist"]} — {row["title"]} ({row["year"]})')
+        offset += 100
+        print(f'  letti {min(offset, d.get("release-count", 0))}/{d.get("release-count", 0)}')
+        if offset >= d.get('release-count', 0):
+            break
 
-    print(f'Current catalog: {len(albums)} albums, latest year: {from_year}')
-    print(f'Looking for new releases from {from_year} onwards…\n')
-
-    # Find ECM label MBID
-    label_mbid = get_ecm_label_mbid()
-    if not label_mbid:
-        print('ERROR: Could not find ECM Records label on MusicBrainz.')
-        sys.exit(1)
-
-    # Fetch releases
-    releases = fetch_label_releases(label_mbid, from_year)
-    print(f'\nFound {len(releases)} MB releases from {from_year} onwards.\n')
-
-    # Filter to genuinely new albums
-    new_albums = []
-    for rel in releases:
-        catalog = extract_catalog_number(rel)
-        if not catalog:
-            continue
-        if catalog.strip().upper() in existing:
-            continue
-        album = build_album(rel, catalog)
-        if not album['title']:
-            continue
-        new_albums.append(album)
-        print(f'  + {catalog} — {album["artist"]} — {album["title"]} ({album["year"]})')
-
-    if not new_albums:
-        print('No new albums to add. Catalog is up to date.')
+    if not new:
+        print('Nessun nuovo album. Catalogo aggiornato.')
         return
-
-    print(f'\n{len(new_albums)} new album(s) to add.')
-
+    print(f'\n{len(new)} nuovi album.')
     if DRY_RUN:
-        print('[dry-run] index.html NOT modified.')
+        print('[dry-run] nulla scritto.')
         return
-
-    # Sort new albums by catalog number and append
-    def sort_key(a):
-        m = re.search(r'(\d+)', a['catalog'])
-        return int(m.group(1)) if m else 0
-
-    new_albums.sort(key=sort_key)
-    albums.extend(new_albums)
-
-    # Write back to index.html
-    new_json = json.dumps(albums, ensure_ascii=False, separators=(',', ':'))
-    new_html = prefix + new_json + suffix
-    with open(INDEX_FILE, 'w', encoding='utf-8') as f:
-        f.write(new_html)
-
-    print(f'index.html updated: {len(albums)} albums total (+{len(new_albums)} new).')
+    r = sb('POST', '/rest/v1/albums', list(new.values()),
+           {'Prefer': 'resolution=ignore-duplicates,return=minimal'})
+    if r is None:
+        sys.exit('ERRORE: inserimento in Supabase fallito')
+    print('Inseriti in Supabase.')
 
 
 if __name__ == '__main__':
