@@ -136,6 +136,10 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 .musician-tag{background:var(--bg3);border:1px solid var(--border);color:var(--text2);
   padding:3px 9px;border-radius:12px;font-size:11px;cursor:pointer;transition:all .15s}
 .musician-tag:hover{border-color:var(--accent);color:var(--accent)}
+.mb-link{display:inline-flex;align-items:center;background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text2);padding:4px 10px;border-radius:var(--radius);font-size:11px;
+  text-decoration:none;transition:all .15s}
+.mb-link:hover{border-color:var(--accent);color:var(--accent)}
 .related-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .related-card{background:var(--bg3);border:1px solid var(--border);border-radius:4px;
   padding:8px;cursor:pointer;transition:all .15s}
@@ -197,16 +201,16 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
       Wishlist <span class="nav-count" id="cnt-wish">0</span>
     </button>
     <div class="nav-section" style="margin-top:8px">Serie</div>
-    <button class="nav-btn" onclick="setView('series','ECM 1')" id="nav-ecm1">
+    <button class="nav-btn" onclick="setView('series','ecm1')" id="nav-ecm1">
       ECM 1000 <span class="nav-count" id="cnt-ecm1">0</span>
     </button>
-    <button class="nav-btn" onclick="setView('series','ECM 2')" id="nav-ecm2">
+    <button class="nav-btn" onclick="setView('series','ecm2')" id="nav-ecm2">
       ECM 2000 <span class="nav-count" id="cnt-ecm2">0</span>
     </button>
-    <button class="nav-btn" onclick="setView('series','ECM New Series')" id="nav-ns">
+    <button class="nav-btn" onclick="setView('series','ns')" id="nav-ns">
       ECM New Series <span class="nav-count" id="cnt-ns">0</span>
     </button>
-    <button class="nav-btn" onclick="setView('series','JAPO')" id="nav-japo">
+    <button class="nav-btn" onclick="setView('series','japo')" id="nav-japo">
       JAPO <span class="nav-count" id="cnt-japo">0</span>
     </button>
   </div>
@@ -274,6 +278,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
         <div class="section-title">Musicisti</div>
         <div class="musician-list" id="musician-list"></div>
       </div>
+      <div id="mb-links" style="display:none;flex-wrap:wrap;gap:6px;padding-bottom:16px"></div>
     </div>
   </div>
 </div>
@@ -384,7 +389,7 @@ function applyFilters() {
   filtered = ALBUMS.filter(a => {
     if (currentView === 'owned'    && !owned[a.id])    return false;
     if (currentView === 'wishlist' && !wishlist[a.id]) return false;
-    if (currentView === 'series'   && a.series !== currentSeries) return false;
+    if (currentView === 'series'   && !seriesMatch(a, currentSeries)) return false;
     if (currentArtist && !artistMatch(a, currentArtist)) return false;
     if (activeDecade !== null) {
       const y = parseInt(a.year);
@@ -401,6 +406,16 @@ function applyFilters() {
   renderGrid();
   updateInfo();
   updateNavActive();
+}
+
+function seriesMatch(a, key) {
+  const cat = (a.catalog || '').toUpperCase();
+  const n   = parseInt((cat.match(/\d+/) || [0])[0]);
+  if (key === 'ecm1') return /^ECM/.test(cat) && n >= 1000 && n < 2000;
+  if (key === 'ecm2') return /^ECM/.test(cat) && n >= 2000;
+  if (key === 'ns')   return /NEW.?SERIES/i.test(a.series || '') || /^ECM\s*NS/i.test(cat);
+  if (key === 'japo') return /^JAPO/i.test(cat);
+  return false;
 }
 
 function artistMatch(a, name) {
@@ -478,10 +493,10 @@ function updateCounts() {
     all: ALBUMS.length,
     owned: Object.keys(owned).filter(k => owned[k]).length,
     wishlist: Object.keys(wishlist).filter(k => wishlist[k]).length,
-    ecm1: ALBUMS.filter(a => a.series === 'ECM 1').length,
-    ecm2: ALBUMS.filter(a => a.series === 'ECM 2').length,
-    ns:   ALBUMS.filter(a => a.series === 'ECM New Series').length,
-    japo: ALBUMS.filter(a => a.series === 'JAPO').length,
+    ecm1: ALBUMS.filter(a => seriesMatch(a, 'ecm1')).length,
+    ecm2: ALBUMS.filter(a => seriesMatch(a, 'ecm2')).length,
+    ns:   ALBUMS.filter(a => seriesMatch(a, 'ns')).length,
+    japo: ALBUMS.filter(a => seriesMatch(a, 'japo')).length,
   };
   const withCover = ALBUMS.filter(a => a.cover_ok).length;
 
@@ -517,7 +532,7 @@ function updateNavActive() {
     document.getElementById(map[currentView])?.classList.add('active');
   }
   if (currentView === 'series') {
-    const ids = {'ECM 1':'nav-ecm1','ECM 2':'nav-ecm2','ECM New Series':'nav-ns','JAPO':'nav-japo'};
+    const ids = {'ecm1':'nav-ecm1','ecm2':'nav-ecm2','ns':'nav-ns','japo':'nav-japo'};
     document.getElementById(ids[currentSeries] || '')?.classList.add('active');
   }
 }
@@ -646,16 +661,35 @@ function renderDetail() {
     btnW.className = 'btn btn-wish';
   }
 
-  // musicians tags
+  // musicians tags (from musicianList) or plain text (from musicians field)
   const ml = document.getElementById('musician-list');
   const ms = document.getElementById('musicians-section');
+  const mTitle = ms.querySelector('.section-title');
   if (Array.isArray(a.musicianList) && a.musicianList.length) {
+    mTitle.textContent = 'Musicisti';
     ml.innerHTML = a.musicianList.map(m =>
       `<span class="musician-tag" onclick="filterByArtist('${esc(m)}')">${esc(m)}</span>`
     ).join('');
     ms.style.display = 'block';
+  } else if (a.musicians) {
+    mTitle.textContent = 'Musicisti';
+    ml.innerHTML = `<span style="font-size:11px;color:var(--text2);line-height:1.6">${esc(a.musicians)}</span>`;
+    ms.style.display = 'block';
   } else {
     ms.style.display = 'none';
+  }
+
+  // MusicBrainz links
+  const mbSection = document.getElementById('mb-links');
+  if (a.mbid || a.rg_mbid) {
+    let links = '';
+    if (a.rg_mbid) links += `<a class="mb-link" href="https://musicbrainz.org/release-group/${a.rg_mbid}" target="_blank">MusicBrainz</a>`;
+    if (a.mbid)    links += `<a class="mb-link" href="https://musicbrainz.org/release/${a.mbid}" target="_blank">MB Release</a>`;
+    if (a.rg_mbid) links += `<a class="mb-link" href="https://coverartarchive.org/release-group/${a.rg_mbid}" target="_blank">Cover Art Archive</a>`;
+    mbSection.innerHTML = links;
+    mbSection.style.display = 'flex';
+  } else {
+    mbSection.style.display = 'none';
   }
 
   // related (shared musicians)
