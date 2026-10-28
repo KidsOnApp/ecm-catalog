@@ -418,10 +418,19 @@ function seriesMatch(a, key) {
   return false;
 }
 
+function people(a) {
+  if (a._people) return a._people;
+  const s = new Set();
+  (Array.isArray(a.artistList) ? a.artistList : []).forEach(n => n && s.add(n.trim()));
+  (Array.isArray(a.musicianList) ? a.musicianList : []).forEach(n => n && s.add(n.trim()));
+  if (!s.size && a.artist) {
+    a.artist.split(/\s*(?:\/|,|&|\band\b|\be\b|\bwith\b)\s*/i).forEach(n => n && s.add(n.trim()));
+  }
+  return (a._people = s);
+}
+
 function artistMatch(a, name) {
-  if (a.artist === name) return true;
-  if (Array.isArray(a.artistList) && a.artistList.includes(name)) return true;
-  return false;
+  return a.artist === name || people(a).has(name);
 }
 
 function sortFiltered() {
@@ -623,7 +632,10 @@ function renderDetail() {
   document.getElementById('detail-cover-num').textContent = a.catalog;
   document.getElementById('detail-cat').textContent       = a.catalog;
   document.getElementById('detail-title').textContent     = a.title;
-  document.getElementById('detail-artist').textContent    = a.artist;
+  const names = (Array.isArray(a.artistList) && a.artistList.length) ? a.artistList : [a.artist];
+  document.getElementById('detail-artist').innerHTML = names.map(n =>
+    `<span class="musician-tag" style="font-size:13px" onclick="filterByArtist('${esc(n).replace(/'/g, "\\'")}')">${esc(n)}</span>`
+  ).join(' ');
   document.getElementById('detail-year').textContent      = a.year || '';
   document.getElementById('detail-musicians').textContent = a.musicians || '';
   document.getElementById('detail-notes').textContent     = a.notes || '';
@@ -698,16 +710,15 @@ function renderDetail() {
 
 function renderRelated(a) {
   const section = document.getElementById('related-section');
-  if (!Array.isArray(a.musicianList) || !a.musicianList.length) {
-    section.style.display = 'none';
-    return;
-  }
-  const set = new Set(a.musicianList);
-  const related = ALBUMS.filter(b =>
-    b.id !== a.id &&
-    Array.isArray(b.musicianList) &&
-    b.musicianList.some(m => set.has(m))
-  ).slice(0, 12);
+  const mine = people(a);
+  if (!mine.size) { section.style.display = 'none'; return; }
+  const related = ALBUMS
+    .filter(b => b.id !== a.id)
+    .map(b => ({ b, n: [...people(b)].filter(p => mine.has(p)).length }))
+    .filter(x => x.n > 0)
+    .sort((x, y) => y.n - x.n || (x.b.year || '').localeCompare(y.b.year || ''))
+    .slice(0, 24)
+    .map(x => x.b);
 
   if (!related.length) { section.style.display = 'none'; return; }
 
