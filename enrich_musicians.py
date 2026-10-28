@@ -59,7 +59,7 @@ def sb(method, path, body=None, extra=None):
 def get_albums(limit):
     out, off = [], 0
     while True:
-        b = sb('GET', f'/rest/v1/albums?select=id,catalog,musician_list,mbid&mbid=is.null&order=catalog&limit=1000&offset={off}')
+        b = sb('GET', f'/rest/v1/albums?select=id,catalog,artist,title,musician_list,mbid&mbid=is.null&order=catalog&limit=1000&offset={off}')
         if not isinstance(b, list) or not b:
             break
         out += b
@@ -69,16 +69,39 @@ def get_albums(limit):
     return out[:limit] if limit else out
 
 
-def find_release(catalog):
+def pick(rels):
+    rels.sort(key=lambda r: (r.get('status') != 'Official', r.get('date') or '9999'))
+    r = rels[0]
+    return r['id'], (r.get('release-group') or {}).get('id')
+
+
+def esc(s):
+    return re.sub(r'([\\"])', r'\\\1', s or '')
+
+
+def find_release(catalog, artist='', title=''):
+    # 1) per numero di catalogo
     m = re.search(r'((?:ECM|JAPO)\s*[\dA-Z\-/ ]+)', catalog, re.I)
     catno = (m.group(1) if m else catalog).strip()
     d = mb('/release', {'query': f'catno:"{catno}"', 'limit': 5})
     rels = (d or {}).get('releases') or []
-    if not rels:
+    if rels:
+        return pick(rels)
+    # 2) fallback: titolo + artista (+ etichetta ECM)
+    if not title:
         return None, None
-    rels.sort(key=lambda r: (r.get('status') != 'Official', r.get('date') or '9999'))
-    r = rels[0]
-    return r['id'], (r.get('release-group') or {}).get('id')
+    clean = re.sub(r'\s*[\[\(].*?[\]\)]\s*', ' ', title).strip() or title
+    queries = []
+    if artist:
+        queries.append(f'release:"{esc(clean)}" AND artist:"{esc(artist)}" AND label:"ECM"')
+        queries.append(f'release:"{esc(clean)}" AND artist:"{esc(artist)}"')
+    queries.append(f'release:"{esc(clean)}" AND label:"ECM"')
+    for q in queries:
+        d = mb('/release', {'query': q, 'limit': 5})
+        rels = [r for r in ((d or {}).get('releases') or []) if int(r.get('score', 0)) >= 90]
+        if rels:
+            return pick(rels)
+    return None, None
 
 
 def credits(mbid):
@@ -124,7 +147,7 @@ def main():
     ok = nf = 0
     for i, al in enumerate(albums, 1):
         print(f'[{i}/{len(albums)}] {al["catalog"]}')
-        mbid, rg = find_release(al['catalog'])
+        mbid, rg = find_release(al['catalog'], al.get('artist', ''), al.get('title', ''))
         if not mbid:
             nf += 1
             print('    ✗ release non trovata')
