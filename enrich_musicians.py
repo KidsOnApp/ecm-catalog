@@ -1,23 +1,33 @@
 #!/usr/bin/env python3
 """
-enrich_musicians.py
--------------------
-Per ogni album senza MBID: cerca la release su MusicBrainz tramite numero di
-catalogo, poi ne legge i crediti (strumenti / voci / direttori) e aggiorna
-Supabase: mbid, rg_mbid, musicians (testo), musician_list (array JSON).
-Gli album che hanno già musicisti inseriti a mano NON vengono sovrascritti.
+enrich_musicians.py  (v3: MusicBrainz + Discogs)
+------------------------------------------------
+Per ogni album senza musicisti (e non ancora controllato):
+  1. trova la release su MusicBrainz (numero di catalogo, poi titolo+artista)
+  2. legge i crediti della release su MusicBrainz
+  3. se mancano, prova fino a 3 altre edizioni dello stesso release-group
+  4. se mancano ancora e c'è DISCOGS_TOKEN, cerca su Discogs
+Salva: mbid, rg_mbid, musicians, musician_list, credits_source, credits_checked_at.
+Gli album con musicisti già presenti non vengono sovrascritti.
 
-Uso:  python enrich_musicians.py [--limit 50]
-Env:  SUPABASE_URL, SUPABASE_SERVICE_KEY
+Uso:  python enrich_musicians.py [--limit 50] [--recheck]
+Env:  SUPABASE_URL, SUPABASE_SERVICE_KEY, DISCOGS_TOKEN (opzionale)
+Richiede le colonne credits_source (text) e credits_checked_at (timestamptz).
 """
 import argparse, json, os, re, sys, time
 import urllib.error, urllib.parse, urllib.request
+from datetime import datetime, timezone
 
 MB = 'https://musicbrainz.org/ws/2'
-UA = 'ECMCatalogApp/2.0 (ale.michetti@gmail.com)'
-RATE = 1.2
+DG = 'https://api.discogs.com'
+UA = 'ECMCatalogApp/3.0 (ale.michetti@gmail.com)'
 WAITS = [5, 15, 30, 60]
 PERF = {'instrument', 'vocal', 'performer', 'conductor', 'performing orchestra', 'orchestra', 'chorus master'}
+# Ruoli Discogs che NON sono esecutori
+NOT_PERF = re.compile(
+    r'producer|engineer|master|design|photo|liner|cover|artwork|record(ed|ing)|mix(ed|ing)|executive|'
+    r'technician|coordinat|manage|edit|written|compos|arrang|lyric|translat|illustrat|direction|'
+    r'concept|text|supervis|assist|art direction|sleeve|typograph|painting|drawing|other', re.I)
 
 
 def http_json(url, headers, method='GET', body=None, timeout=60):
@@ -31,9 +41,8 @@ def http_json(url, headers, method='GET', body=None, timeout=60):
         except urllib.error.HTTPError as e:
             if e.code in (429, 502, 503) and i < len(WAITS):
                 time.sleep(WAITS[i]); continue
-            if e.code == 404:
-                return None
-            print(f'    [HTTP {e.code}] {url[:90]}')
+            if e.code != 404:
+                print(f'    [HTTP {e.code}] {url[:90]}')
             return None
         except Exception as e:
             if i < len(WAITS):
@@ -43,32 +52,40 @@ def http_json(url, headers, method='GET', body=None, timeout=60):
 
 
 def mb(path, params):
-    time.sleep(RATE)
-    params = dict(params, fmt='json')
-    return http_json(f'{MB}{path}?{urllib.parse.urlencode(params)}', {'User-Agent': UA})
+    time.sleep(1.2)
+    return http_json(f'{MB}{path}?{urllib.parse.urlencode(dict(params, fmt="json"))}', {'User-Agent': UA})
+
+
+def dg(path, params=None):
+    time.sleep(1.1)
+    q = dict(params or {}, token=DISCOGS_TOKEN)
+    return http_json(f'{DG}{path}?{urllib.parse.urlencode(q)}', {'User-Agent': UA})
 
 
 def sb(method, path, body=None, extra=None):
-    url = SB_URL.rstrip('/') + path
     h = {'apikey': SB_KEY, 'Authorization': f'Bearer {SB_KEY}', 'Content-Type': 'application/json'}
-    if extra:
-        h.update(extra)
-    return http_json(url, h, method, body)
+    h.update(extra or {})
+    return http_json(SB_URL.rstrip('/') + path, h, method, body)
 
 
-def get_albums(limit):
+def get_albums(limit, recheck):
+    flt = '' if recheck else '&credits_checked_at=is.null'
     out, off = [], 0
     while True:
-        b = sb('GET', f'/rest/v1/albums?select=id,catalog,artist,title,musician_list,mbid&mbid=is.null&order=catalog&limit=1000&offset={off}')
+        b = sb('GET', '/rest/v1/albums?select=id,catalog,artist,title,musician_list,mbid,rg_mbid'
+                      f'{flt}&order=catalog&limit=1000&offset={off}')
+        if b is None:
+            sys.exit('ERRORE lettura album: hai creato le colonne credits_source / credits_checked_at?')
         if not isinstance(b, list) or not b:
             break
-        out += b
+        out += [x for x in b if not x.get('musician_list')]
         if len(b) < 1000:
             break
         off += 1000
     return out[:limit] if limit else out
 
 
+# ── MusicBrainz ──────────────────────────────────────────────────────────────
 def pick(rels):
     rels.sort(key=lambda r: (r.get('status') != 'Official', r.get('date') or '9999'))
     r = rels[0]
@@ -80,14 +97,12 @@ def esc(s):
 
 
 def find_release(catalog, artist='', title=''):
-    # 1) per numero di catalogo
     m = re.search(r'((?:ECM|JAPO)\s*[\dA-Z\-/ ]+)', catalog, re.I)
     catno = (m.group(1) if m else catalog).strip()
     d = mb('/release', {'query': f'catno:"{catno}"', 'limit': 5})
     rels = (d or {}).get('releases') or []
     if rels:
         return pick(rels)
-    # 2) fallback: titolo + artista (+ etichetta ECM)
     if not title:
         return None, None
     clean = re.sub(r'\s*[\[\(].*?[\]\)]\s*', ' ', title).strip() or title
@@ -104,11 +119,11 @@ def find_release(catalog, artist='', title=''):
     return None, None
 
 
-def credits(mbid):
+def mb_credits(mbid):
     d = mb(f'/release/{mbid}', {'inc': 'artist-rels+recording-rels+recording-level-rels'})
     if not d:
         return []
-    found = {}  # name -> set(instruments)
+    found = {}
 
     def add(rels):
         for rel in rels or []:
@@ -131,39 +146,102 @@ def credits(mbid):
     return sorted(found.items())
 
 
+def sibling_releases(rg, exclude, n=3):
+    if not rg:
+        return []
+    d = mb('/release', {'release-group': rg, 'limit': 25})
+    rels = [r for r in (d or {}).get('releases') or [] if r['id'] != exclude]
+    rels.sort(key=lambda r: (r.get('status') != 'Official', r.get('date') or '9999'))
+    return [r['id'] for r in rels[:n]]
+
+
+# ── Discogs ──────────────────────────────────────────────────────────────────
+def clean_name(n):
+    return re.sub(r'\s*\(\d+\)\s*$', '', n or '').strip()
+
+
+def discogs_credits(catalog, artist, title):
+    if not DISCOGS_TOKEN:
+        return []
+    m = re.search(r'((?:ECM|JAPO)\s*[\dA-Z\-/ ]+)', catalog, re.I)
+    catno = re.sub(r'\s+', ' ', (m.group(1) if m else catalog)).strip()
+    base = re.match(r'(ECM|JAPO)\s*(\d+)', catno, re.I)
+    tries = [{'catno': catno, 'label': 'ECM Records', 'type': 'release'}]
+    if base:
+        tries.append({'catno': f'{base.group(1).upper()} {base.group(2)}', 'type': 'release'})
+    tries.append({'release_title': title, 'artist': artist, 'label': 'ECM Records', 'type': 'release'})
+    for p in tries:
+        d = dg('/database/search', dict(p, per_page=5))
+        for res in ((d or {}).get('results') or [])[:3]:
+            rel = dg(f'/releases/{res["id"]}')
+            found = {}
+            for ea in (rel or {}).get('extraartists') or []:
+                role = ea.get('role') or ''
+                name = clean_name(ea.get('anv') or ea.get('name'))
+                if not name or not role or NOT_PERF.search(role):
+                    continue
+                ins = found.setdefault(name, set())
+                for r in re.split(r',\s*(?![^\[]*\])', role):
+                    r = re.sub(r'\s*\[.*?\]', '', r).strip().lower()
+                    if r:
+                        ins.add(r)
+            if found:
+                return sorted(found.items())
+    return []
+
+
+def fmt(cr):
+    return ', '.join(f'{n} ({", ".join(sorted(s))})' if s else n for n, s in cr)
+
+
 def main():
-    global SB_URL, SB_KEY
+    global SB_URL, SB_KEY, DISCOGS_TOKEN
     ap = argparse.ArgumentParser()
     ap.add_argument('--limit', type=int, default=0)
+    ap.add_argument('--recheck', action='store_true', help='ricontrolla anche album già controllati')
     ap.add_argument('--url', default=os.environ.get('SUPABASE_URL'))
     ap.add_argument('--key', default=os.environ.get('SUPABASE_SERVICE_KEY'))
     a = ap.parse_args()
     if not a.url or not a.key:
         sys.exit('ERRORE: servono SUPABASE_URL e SUPABASE_SERVICE_KEY')
     SB_URL, SB_KEY = a.url.strip(), a.key.strip()
+    DISCOGS_TOKEN = (os.environ.get('DISCOGS_TOKEN') or '').strip()
+    print('Discogs:', 'attivo' if DISCOGS_TOKEN else 'NON attivo (manca DISCOGS_TOKEN)')
 
-    albums = get_albums(a.limit)
-    print(f'{len(albums)} album da arricchire\n')
-    ok = nf = 0
+    albums = get_albums(a.limit, a.recheck)
+    print(f'{len(albums)} album da controllare\n')
+    stats = {'musicbrainz': 0, 'musicbrainz-altra-edizione': 0, 'discogs': 0, 'nessuna': 0}
     for i, al in enumerate(albums, 1):
-        print(f'[{i}/{len(albums)}] {al["catalog"]}')
-        mbid, rg = find_release(al['catalog'], al.get('artist', ''), al.get('title', ''))
+        print(f'[{i}/{len(albums)}] {al["catalog"]} — {al.get("artist","")}')
+        mbid, rg = al.get('mbid'), al.get('rg_mbid')
         if not mbid:
-            nf += 1
-            print('    ✗ release non trovata')
-            continue
-        patch = {'mbid': mbid, 'rg_mbid': rg}
-        if not al.get('musician_list'):
-            cr = credits(mbid)
-            if cr:
-                patch['musician_list'] = [n for n, _ in cr]
-                patch['musicians'] = ', '.join(f'{n} ({", ".join(sorted(s))})' if s else n for n, s in cr)
-                print(f'    ✓ {len(cr)} musicisti')
-            else:
-                print('    · nessun credito su MusicBrainz')
+            mbid, rg = find_release(al['catalog'], al.get('artist', ''), al.get('title', ''))
+        patch, cr, src = {}, [], None
+        if mbid:
+            patch.update({'mbid': mbid, 'rg_mbid': rg})
+            cr = mb_credits(mbid)
+            src = 'musicbrainz' if cr else None
+            if not cr:
+                for other in sibling_releases(rg, mbid):
+                    cr = mb_credits(other)
+                    if cr:
+                        src = 'musicbrainz-altra-edizione'
+                        break
+        if not cr:
+            cr = discogs_credits(al['catalog'], al.get('artist', ''), al.get('title', ''))
+            src = 'discogs' if cr else None
+        if cr:
+            patch['musician_list'] = [n for n, _ in cr]
+            patch['musicians'] = fmt(cr)
+            print(f'    ✓ {len(cr)} musicisti ({src})')
+            stats[src] += 1
+        else:
+            print('    · nessun credito trovato')
+            stats['nessuna'] += 1
+        patch['credits_source'] = src
+        patch['credits_checked_at'] = datetime.now(timezone.utc).isoformat()
         sb('PATCH', f'/rest/v1/albums?id=eq.{urllib.parse.quote(al["id"])}', patch, {'Prefer': 'return=minimal'})
-        ok += 1
-    print(f'\nAggiornati: {ok}  Non trovati: {nf}')
+    print('\nRiepilogo:', stats)
 
 
 if __name__ == '__main__':
