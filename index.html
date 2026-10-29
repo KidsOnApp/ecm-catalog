@@ -136,10 +136,10 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 .musician-tag{background:var(--bg3);border:1px solid var(--border);color:var(--text2);
   padding:3px 9px;border-radius:12px;font-size:11px;cursor:pointer;transition:all .15s}
 .musician-tag:hover{border-color:var(--accent);color:var(--accent)}
-.mb-link{display:inline-flex;align-items:center;background:var(--bg3);border:1px solid var(--border2);
-  color:var(--text2);padding:4px 10px;border-radius:var(--radius);font-size:11px;
-  text-decoration:none;transition:all .15s}
-.mb-link:hover{border-color:var(--accent);color:var(--accent)}
+.mb-link{display:inline-flex;align-items:center;gap:3px;color:var(--text3);font-size:11px;
+  text-decoration:none;border-bottom:1px dotted var(--border2);padding-bottom:1px;transition:all .15s}
+.mb-link:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.no-credits{font-size:11px;color:var(--text3);font-style:italic}
 .related-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .related-card{background:var(--bg3);border:1px solid var(--border);border-radius:4px;
   padding:8px;cursor:pointer;transition:all .15s}
@@ -278,7 +278,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
         <div class="section-title">Musicisti</div>
         <div class="musician-list" id="musician-list"></div>
       </div>
-      <div id="mb-links" style="display:none;flex-wrap:wrap;gap:6px;padding-bottom:16px"></div>
+      <div id="mb-links" style="display:none;flex-wrap:wrap;gap:6px 16px;padding-bottom:16px;border-top:1px solid var(--border);margin-top:14px"></div>
     </div>
   </div>
 </div>
@@ -688,17 +688,19 @@ function renderDetail() {
     ml.innerHTML = `<span style="font-size:11px;color:var(--text2);line-height:1.6">${esc(a.musicians)}</span>`;
     ms.style.display = 'block';
   } else {
-    ms.style.display = 'none';
+    mTitle.textContent = 'Musicisti';
+    ml.innerHTML = '<span class="no-credits">Crediti non disponibili</span>';
+    ms.style.display = 'block';
   }
 
   // MusicBrainz links
   const mbSection = document.getElementById('mb-links');
   if (a.mbid || a.rg_mbid) {
     let links = '';
-    if (a.rg_mbid) links += `<a class="mb-link" href="https://musicbrainz.org/release-group/${a.rg_mbid}" target="_blank">MusicBrainz</a>`;
-    if (a.mbid)    links += `<a class="mb-link" href="https://musicbrainz.org/release/${a.mbid}" target="_blank">MB Release</a>`;
-    if (a.rg_mbid) links += `<a class="mb-link" href="https://coverartarchive.org/release-group/${a.rg_mbid}" target="_blank">Cover Art Archive</a>`;
-    mbSection.innerHTML = links;
+    if (a.rg_mbid) links += `<a class="mb-link" href="https://musicbrainz.org/release-group/${a.rg_mbid}" target="_blank" rel="noopener">MusicBrainz ↗</a>`;
+    if (a.mbid)    links += `<a class="mb-link" href="https://musicbrainz.org/release/${a.mbid}" target="_blank" rel="noopener">Release ↗</a>`;
+    if (a.rg_mbid) links += `<a class="mb-link" href="https://coverartarchive.org/release-group/${a.rg_mbid}" target="_blank" rel="noopener">Cover Art ↗</a>`;
+    mbSection.innerHTML = '<div class="section-title" style="width:100%;padding-bottom:2px">Link esterni</div>' + links;
     mbSection.style.display = 'flex';
   } else {
     mbSection.style.display = 'none';
