@@ -12,6 +12,7 @@
   --accent:#4a9eff; --accent2:#2d7adb;
   --gold:#c9a84c; --gold2:#a8893e;
   --red:#c0392b;
+  --live:#5fd3a3;
   --radius:4px;
   --sidebar:260px;
 }
@@ -87,6 +88,41 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 .ind{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .ind-owned{background:var(--accent)}
 .ind-wish{background:var(--gold)}
+
+/* ── CONCERTI ── */
+.album-card.live-lead{border-color:rgba(95,211,163,.45)}
+.album-card.live-lead:hover{border-color:var(--live)}
+.live-badge{position:absolute;top:6px;left:6px;z-index:2;background:rgba(10,10,10,.8);
+  color:var(--live);border:1px solid rgba(95,211,163,.55);border-radius:10px;font-size:9px;
+  font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;pointer-events:none}
+.live-dot{position:absolute;top:7px;left:7px;z-index:2;width:8px;height:8px;border-radius:50%;
+  background:var(--live);opacity:.7;box-shadow:0 0 0 2px rgba(10,10,10,.75);pointer-events:none}
+.musician-tag.live{border-color:rgba(95,211,163,.6);color:var(--live)}
+.musician-tag.live::before{content:'♪ '}
+.musician-tag.live:hover{border-color:var(--live);background:rgba(95,211,163,.08)}
+.concert-list{display:flex;flex-direction:column;gap:6px}
+.concert-row{display:flex;gap:12px;align-items:flex-start;background:var(--bg3);
+  border:1px solid var(--border);border-radius:4px;padding:8px 10px;font-size:11px;line-height:1.45}
+.concert-date{color:var(--live);font-weight:600;white-space:nowrap;min-width:92px}
+.concert-body{flex:1;min-width:0}
+.concert-what{color:var(--text)}
+.concert-with{color:var(--text2)}
+.concert-info{color:var(--text3);font-style:italic}
+.concert-where{color:var(--text3)}
+.concert-tag{font-size:9px;border:1px solid var(--border2);border-radius:8px;padding:0 6px;
+  color:var(--text2);margin-left:6px;text-transform:uppercase;letter-spacing:.05em}
+.concert-more{background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;
+  padding:4px 0;text-align:left}
+.concert-more:hover{color:var(--live)}
+.source-note{font-size:10px;color:var(--text3);margin-top:8px}
+.source-note a{color:var(--text3)}
+#artist-concerts{display:none;padding:10px 16px 12px;background:var(--bg2);border-bottom:1px solid var(--border)}
+#artist-concerts.open{display:block}
+#artist-concerts .section-title{padding:0 0 8px}
+@media (max-width:600px){
+  .concert-row{flex-direction:column;gap:2px}
+  .concert-date{min-width:0}
+}
 
 /* ── DETAIL PANEL ── */
 #detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;
@@ -213,6 +249,10 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
     <button class="nav-btn" onclick="setView('series','japo')" id="nav-japo">
       JAPO <span class="nav-count" id="cnt-japo">0</span>
     </button>
+    <div class="nav-section" style="margin-top:8px">Concerti</div>
+    <button class="nav-btn" onclick="setView('live')" id="nav-live">
+      Artisti in concerto <span class="nav-count" id="cnt-live">0</span>
+    </button>
   </div>
   <div id="db-stats"></div>
 </nav>
@@ -231,12 +271,14 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
       <option value="year">Anno</option>
       <option value="artist">Artista</option>
       <option value="title">Titolo</option>
+      <option value="next">Prossimo concerto</option>
     </select>
   </div>
   <div id="artist-header">
     <button id="artist-back" onclick="clearArtist()">←</button>
     <span id="artist-name-display"></span>
   </div>
+  <div id="artist-concerts"></div>
   <div id="content">
     <div id="album-grid"></div>
     <div id="empty"><h2>Nessun risultato</h2><p>Prova con altri termini di ricerca</p></div>
@@ -270,6 +312,11 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
       </div>
     </div>
     <div id="detail-sections">
+      <div id="concerts-section" style="display:none">
+        <div class="section-title">Prossimi concerti <span id="concerts-count" style="color:var(--text3);font-weight:400"></span></div>
+        <div class="concert-list" id="concert-list"></div>
+        <div class="source-note">Date dal calendario di <a href="https://ecmrecords.com/concerts/" target="_blank" rel="noopener">ecmrecords.com</a>. Verifica sempre sul sito dell'organizzatore.</div>
+      </div>
       <div id="related-section" style="display:none">
         <div class="section-title">Album collegati <span id="related-count" style="color:var(--text3);font-weight:400"></span></div>
         <div class="related-list" id="related-list"></div>
@@ -283,6 +330,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
   </div>
 </div>
 
+<script src="concerts_match.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 //  CONFIG
@@ -303,6 +351,8 @@ let currentSort   = 'cat';
 let decadeOpen    = false;
 let activeDecade  = null;
 let openAlbum     = null;
+let CONCERTS      = [];          // concerti futuri dalla tabella `concerts`
+let LIVE          = new Map();   // chiave nome normalizzato -> concerti
 
 // localStorage keys
 const LS_OWNED    = 'ecm_owned_v2';
@@ -362,16 +412,34 @@ async function loadAlbums() {
   }));
 }
 
+// Concerti futuri. Se la tabella non esiste o non risponde, il sito funziona senza.
+async function loadConcerts() {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const rows = await sbGet(
+      `/rest/v1/concerts?select=id,source,date,artist,info,venue,city,country,country_code,url`
+      + `&date=gte.${today}&order=date&limit=2000`
+    );
+    return Array.isArray(rows) ? rows : [];
+  } catch (e) {
+    console.warn('Concerti non disponibili:', e.message);
+    return [];
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 async function init() {
   try {
-    ALBUMS = await loadAlbums();
+    const [albums, concerts] = await Promise.all([loadAlbums(), loadConcerts()]);
+    ALBUMS = albums;
+    CONCERTS = concerts;
   } catch(e) {
     document.getElementById('loading-msg').textContent = 'Errore caricamento: ' + e.message;
     return;
   }
+  linkAllConcerts();
   document.getElementById('loading-screen').classList.add('hidden');
   buildDecades();
   updateCounts();
@@ -390,6 +458,7 @@ function applyFilters() {
     if (currentView === 'owned'    && !owned[a.id])    return false;
     if (currentView === 'wishlist' && !wishlist[a.id]) return false;
     if (currentView === 'series'   && !seriesMatch(a, currentSeries)) return false;
+    if (currentView === 'live'     && !albumLive(a).lead.length) return false;
     if (currentArtist && !artistMatch(a, currentArtist)) return false;
     if (activeDecade !== null) {
       const y = parseInt(a.year);
@@ -433,11 +502,93 @@ function artistMatch(a, name) {
   return a.artist === name || people(a).has(name);
 }
 
+// ═══════════════════════════════════════════════════════════
+//  CONCERTI (logica di abbinamento in concerts_match.js)
+// ═══════════════════════════════════════════════════════════
+function linkAllConcerts() {
+  LIVE = linkConcerts(CONCERTS, buildNameIndex(ALBUMS, people));
+  ALBUMS.forEach(a => { a._live = null; });
+}
+
+// Concerti collegati a un album.
+//   all:  suona l'artista o uno dei musicisti del disco (omaggi compresi)
+//   lead: suona l'artista del disco, esclusi gli omaggi -> illumina la copertina
+function albumLive(a) {
+  if (a._live) return a._live;
+  const leadNames = (Array.isArray(a.artistList) && a.artistList.length) ? a.artistList : [a.artist];
+  const leadKeys = new Set();
+  leadNames.forEach(n => nameKeys(n).forEach(k => leadKeys.add(k)));
+  const all = new Map();
+  for (const p of people(a)) for (const c of concertsForName(p, LIVE)) all.set(c.id, c);
+  const list = [...all.values()].sort((x, y) => x.date.localeCompare(y.date));
+  const lead = list.filter(c => c.matches.some(m => leadKeys.has(m.key) && !m.tribute));
+  return (a._live = { all: list, lead, leadKeys });
+}
+
+function personLive(name) {
+  return LIVE.size ? concertsForName(name, LIVE) : [];
+}
+
+function fmtConcertDate(iso, withYear) {
+  const d = new Date(iso + 'T12:00:00');
+  const s = d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+  return (withYear || d.getFullYear() !== new Date().getFullYear()) ? `${s} ${d.getFullYear()}` : s;
+}
+
+function concertPlace(c) {
+  return [c.city, c.country].filter(Boolean).join(', ');
+}
+
+function liveTitle(list) {
+  const n = list.length, c = list[0];
+  return `${n} ${n === 1 ? 'concerto' : 'concerti'} in programma · prossimo ${fmtConcertDate(c.date)}, ${concertPlace(c)}`;
+}
+
+// Una riga di concerto. keys: chiavi dei nomi da mettere in evidenza (album o artista aperto).
+function concertRow(c, keys) {
+  const mine = c.matches.filter(m => !keys || keys.has(m.key));
+  const tribute = mine.length && mine.every(m => m.tribute);
+  const headKey = ' ' + normName(c.artist) + ' ';
+  const withNames = mine.filter(m => !headKey.includes(' ' + m.key + ' ')).map(m => m.name);
+  const info = String(c.info || '').split('\n').map(s => s.trim()).filter(Boolean).slice(0, 2).join(' · ');
+  const where = [c.venue && c.venue !== 'tba' ? c.venue : '', concertPlace(c)].filter(Boolean).join(' — ');
+  const link = /^https?:\/\//i.test(c.url || '')
+    ? `<a class="mb-link" href="${esc(c.url)}" target="_blank" rel="noopener">Info ↗</a>` : '';
+  return `<div class="concert-row">
+    <span class="concert-date">${esc(fmtConcertDate(c.date))}</span>
+    <div class="concert-body">
+      <div class="concert-what">${esc(c.artist)}${tribute ? '<span class="concert-tag">omaggio</span>' : ''}</div>
+      ${withNames.length ? `<div class="concert-with">con ${esc(withNames.join(', '))}</div>` : ''}
+      ${info ? `<div class="concert-info">${esc(info)}</div>` : ''}
+      <div class="concert-where">${esc(where)}</div>
+    </div>
+    ${link}
+  </div>`;
+}
+
+function concertListHtml(list, keys, max, moreId) {
+  const shown = list.slice(0, max).map(c => concertRow(c, keys)).join('');
+  const rest = list.length - max;
+  return shown + (rest > 0
+    ? `<button class="concert-more" onclick="${moreId}">Mostra ${rest === 1 ? "l'altro concerto" : `gli altri ${rest} concerti`}</button>`
+    : '');
+}
+
+// Onclick sicuro per un nome (apostrofi e virgolette).
+function jsName(n) {
+  return esc(String(n).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
+
 function sortFiltered() {
   filtered.sort((a, b) => {
     if (currentSort === 'year')   return (a.year || '0').localeCompare(b.year || '0');
     if (currentSort === 'artist') return a.artist.localeCompare(b.artist);
     if (currentSort === 'title')  return a.title.localeCompare(b.title);
+    if (currentSort === 'next') {
+      const na = (albumLive(a).lead[0] || albumLive(a).all[0] || {}).date || '9999';
+      const nb = (albumLive(b).lead[0] || albumLive(b).all[0] || {}).date || '9999';
+      if (na !== nb) return na.localeCompare(nb);
+    }
     // cat: natural sort by number
     const na = parseInt((a.catalog.match(/\d+/) || [0])[0]);
     const nb = parseInt((b.catalog.match(/\d+/) || [0])[0]);
@@ -469,10 +620,17 @@ function renderGrid() {
     const cover = a.cover_url
       ? `<img src="${a.cover_url}" loading="lazy" alt="" onload="this.classList.add('loaded')">`
       : '';
-    return `<div class="album-card" onclick="openDetail('${esc(a.id)}')">
+    const lv = albumLive(a);
+    const liveMark = lv.lead.length
+      ? `<span class="live-badge" title="${esc(liveTitle(lv.lead))}">♪ Live</span>`
+      : lv.all.length
+        ? `<span class="live-dot" title="Un musicista di questo disco è in concerto"></span>`
+        : '';
+    return `<div class="album-card${lv.lead.length ? ' live-lead' : ''}" onclick="openDetail('${esc(a.id)}')"${lv.lead.length ? ` title="${esc(liveTitle(lv.lead))}"` : ''}>
       <div class="album-cover">
         <div class="album-cover-bg"><span class="album-cover-num">${esc(a.catalog)}</span></div>
         ${cover}
+        ${liveMark}
       </div>
       <div class="album-info">
         <div class="album-artist">${esc(a.artist)}</div>
@@ -506,6 +664,7 @@ function updateCounts() {
     ecm2: ALBUMS.filter(a => seriesMatch(a, 'ecm2')).length,
     ns:   ALBUMS.filter(a => seriesMatch(a, 'ns')).length,
     japo: ALBUMS.filter(a => seriesMatch(a, 'japo')).length,
+    live: ALBUMS.filter(a => albumLive(a).lead.length).length,
   };
   const withCover = ALBUMS.filter(a => a.cover_ok).length;
 
@@ -516,11 +675,16 @@ function updateCounts() {
   document.getElementById('cnt-ecm2').textContent   = counts.ecm2;
   document.getElementById('cnt-ns').textContent     = counts.ns;
   document.getElementById('cnt-japo').textContent   = counts.japo;
+  document.getElementById('cnt-live').textContent   = counts.live;
 
   document.getElementById('db-stats').innerHTML =
     `<strong>${counts.all}</strong> album nel catalogo<br>` +
     `<strong>${withCover}</strong> copertine disponibili<br>` +
-    `<strong>${counts.owned}</strong> posseduti · <strong>${counts.wishlist}</strong> wishlist`;
+    `<strong>${counts.owned}</strong> posseduti · <strong>${counts.wishlist}</strong> wishlist` +
+    (CONCERTS.length
+      ? `<br><strong>${CONCERTS.length}</strong> concerti in programma ` +
+        `(<a href="https://ecmrecords.com/concerts/" target="_blank" rel="noopener" style="color:inherit">fonte ECM</a>)`
+      : '');
 }
 
 function updateInfo() {
@@ -536,6 +700,7 @@ function updateNavActive() {
     'all':     'nav-all',
     'owned':   'nav-owned',
     'wishlist':'nav-wish',
+    'live':    'nav-live',
   };
   if (map[currentView]) {
     document.getElementById(map[currentView])?.classList.add('active');
@@ -554,6 +719,11 @@ function setView(view, series) {
   currentSeries = series || null;
   currentArtist = null;
   document.getElementById('artist-header').classList.remove('open');
+  document.getElementById('artist-concerts').classList.remove('open');
+  if (view === 'live') {
+    currentSort = 'next';
+    document.getElementById('sort-select').value = 'next';
+  }
   applyFilters();
 }
 
@@ -602,6 +772,7 @@ function setDecade(d) {
 function clearArtist() {
   currentArtist = null;
   document.getElementById('artist-header').classList.remove('open');
+  document.getElementById('artist-concerts').classList.remove('open');
   applyFilters();
 }
 
@@ -610,7 +781,20 @@ function filterByArtist(name) {
   currentArtist = name;
   document.getElementById('artist-header').classList.add('open');
   document.getElementById('artist-name-display').textContent = name;
+  renderArtistConcerts(false);
   applyFilters();
+}
+
+// Striscia dei concerti sotto il nome dell'artista selezionato.
+function renderArtistConcerts(showAll) {
+  const box = document.getElementById('artist-concerts');
+  const list = currentArtist ? personLive(currentArtist) : [];
+  if (!list.length) { box.classList.remove('open'); box.innerHTML = ''; return; }
+  box.innerHTML =
+    `<div class="section-title">Prossimi concerti <span style="color:var(--text3);font-weight:400">(${list.length})</span></div>` +
+    `<div class="concert-list">${concertListHtml(list, nameKeys(currentArtist), showAll ? list.length : 4, 'renderArtistConcerts(true)')}</div>` +
+    `<div class="source-note">Date dal calendario di <a href="https://ecmrecords.com/concerts/" target="_blank" rel="noopener">ecmrecords.com</a>. Verifica sempre sul sito dell'organizzatore.</div>`;
+  box.classList.add('open');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -633,9 +817,12 @@ function renderDetail() {
   document.getElementById('detail-cat').textContent       = a.catalog;
   document.getElementById('detail-title').textContent     = a.title;
   const names = (Array.isArray(a.artistList) && a.artistList.length) ? a.artistList : [a.artist];
-  document.getElementById('detail-artist').innerHTML = names.map(n =>
-    `<span class="musician-tag" style="font-size:13px" onclick="filterByArtist('${esc(n).replace(/'/g, "\\'")}')">${esc(n)}</span>`
-  ).join(' ');
+  document.getElementById('detail-artist').innerHTML = names.map(n => {
+    const lv = personLive(n);
+    return `<span class="musician-tag${lv.length ? ' live' : ''}" style="font-size:13px"`
+      + (lv.length ? ` title="${esc(liveTitle(lv))}"` : '')
+      + ` onclick="filterByArtist('${jsName(n)}')">${esc(n)}</span>`;
+  }).join(' ');
   document.getElementById('detail-year').textContent      = a.year || '';
   document.getElementById('detail-musicians').textContent = a.musicians || '';
   document.getElementById('detail-notes').textContent     = a.notes || '';
@@ -679,9 +866,12 @@ function renderDetail() {
   const mTitle = ms.querySelector('.section-title');
   if (Array.isArray(a.musicianList) && a.musicianList.length) {
     mTitle.textContent = 'Musicisti';
-    ml.innerHTML = a.musicianList.map(m =>
-      `<span class="musician-tag" onclick="filterByArtist('${esc(m)}')">${esc(m)}</span>`
-    ).join('');
+    ml.innerHTML = a.musicianList.map(m => {
+      const lv = personLive(m);
+      return `<span class="musician-tag${lv.length ? ' live' : ''}"`
+        + (lv.length ? ` title="${esc(liveTitle(lv))}"` : '')
+        + ` onclick="filterByArtist('${jsName(m)}')">${esc(m)}</span>`;
+    }).join('');
     ms.style.display = 'block';
   } else if (a.musicians) {
     mTitle.textContent = 'Musicisti';
@@ -706,8 +896,28 @@ function renderDetail() {
     mbSection.style.display = 'none';
   }
 
+  // concerti dell'artista e dei musicisti del disco
+  renderAlbumConcerts(false);
+
   // related (shared musicians)
   renderRelated(a);
+}
+
+function renderAlbumConcerts(showAll) {
+  const a = openAlbum;
+  const sec = document.getElementById('concerts-section');
+  if (!a) return;
+  const lv = albumLive(a);
+  if (!lv.all.length) { sec.style.display = 'none'; return; }
+  const keys = new Set();
+  people(a).forEach(p => nameKeys(p).forEach(k => keys.add(k)));
+  // prima i concerti dell'artista del disco, poi quelli dei soli musicisti
+  const leadIds = new Set(lv.lead.map(c => c.id));
+  const list = [...lv.lead, ...lv.all.filter(c => !leadIds.has(c.id))];
+  document.getElementById('concerts-count').textContent = `(${list.length})`;
+  document.getElementById('concert-list').innerHTML =
+    concertListHtml(list, keys, showAll ? list.length : 5, 'renderAlbumConcerts(true)');
+  sec.style.display = 'block';
 }
 
 function renderRelated(a) {
