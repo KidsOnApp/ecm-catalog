@@ -14,7 +14,7 @@ Uso:  python enrich_musicians.py [--limit 50] [--recheck]
 Env:  SUPABASE_URL, SUPABASE_SERVICE_KEY, DISCOGS_TOKEN (opzionale)
 Richiede le colonne credits_source (text) e credits_checked_at (timestamptz).
 """
-import argparse, json, os, re, sys, time
+import argparse, difflib, json, os, re, sys, time
 import urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
@@ -27,7 +27,7 @@ PERF = {'instrument', 'vocal', 'performer', 'conductor', 'performing orchestra',
 NOT_PERF = re.compile(
     r'producer|engineer|master|design|photo|liner|cover|artwork|record(ed|ing)|mix(ed|ing)|executive|'
     r'technician|coordinat|manage|edit|written|compos|arrang|lyric|translat|illustrat|direction|'
-    r'concept|text|supervis|assist|art direction|sleeve|typograph|painting|drawing|other', re.I)
+    r'concept|text|supervis|assist|art direction|sleeve|typograph|painting|drawing|layout|graphic|tape|curat|restor|a&r|other', re.I)
 
 
 def http_json(url, headers, method='GET', body=None, timeout=60):
@@ -69,16 +69,17 @@ def sb(method, path, body=None, extra=None):
 
 
 def get_albums(limit, recheck):
-    flt = '' if recheck else '&credits_checked_at=is.null'
+    # nuovi album + album compilati dalla vecchia versione (non validata) di Discogs
+    flt = '' if recheck else '&or=(credits_checked_at.is.null,credits_source.eq.discogs)'
     out, off = [], 0
     while True:
-        b = sb('GET', '/rest/v1/albums?select=id,catalog,artist,title,musician_list,mbid,rg_mbid'
+        b = sb('GET', '/rest/v1/albums?select=id,catalog,artist,title,musician_list,mbid,rg_mbid,credits_source'
                       f'{flt}&order=catalog&limit=1000&offset={off}')
         if b is None:
             sys.exit('ERRORE lettura album: hai creato le colonne credits_source / credits_checked_at?')
         if not isinstance(b, list) or not b:
             break
-        out += [x for x in b if not x.get('musician_list')]
+        out += [x for x in b if not x.get('musician_list') or x.get('credits_source') == 'discogs']
         if len(b) < 1000:
             break
         off += 1000
@@ -160,6 +161,19 @@ def clean_name(n):
     return re.sub(r'\s*\(\d+\)\s*$', '', n or '').strip()
 
 
+def _norm(s):
+    return re.sub(r'[^a-z0-9]', '', (s or '').lower())
+
+
+def title_match(a, b):
+    a, b = _norm(a), _norm(b)
+    if not a or not b:
+        return False
+    if difflib.SequenceMatcher(None, a, b).ratio() >= 0.8:
+        return True
+    return min(len(a), len(b)) >= 8 and (a in b or b in a)
+
+
 def discogs_credits(catalog, artist, title):
     if not DISCOGS_TOKEN:
         return []
@@ -172,7 +186,10 @@ def discogs_credits(catalog, artist, title):
     tries.append({'release_title': title, 'artist': artist, 'label': 'ECM Records', 'type': 'release'})
     for p in tries:
         d = dg('/database/search', dict(p, per_page=5))
-        for res in ((d or {}).get('results') or [])[:3]:
+        for res in ((d or {}).get('results') or [])[:5]:
+            rt = (res.get('title') or '').split(' - ', 1)[-1]
+            if not title_match(rt, title):
+                continue
             rel = dg(f'/releases/{res["id"]}')
             found = {}
             for ea in (rel or {}).get('extraartists') or []:
@@ -210,14 +227,14 @@ def main():
 
     albums = get_albums(a.limit, a.recheck)
     print(f'{len(albums)} album da controllare\n')
-    stats = {'musicbrainz': 0, 'musicbrainz-altra-edizione': 0, 'discogs': 0, 'nessuna': 0}
+    stats = {'musicbrainz': 0, 'musicbrainz-altra-edizione': 0, 'discogs-v2': 0, 'nessuna': 0}
     for i, al in enumerate(albums, 1):
         print(f'[{i}/{len(albums)}] {al["catalog"]} — {al.get("artist","")}')
         mbid, rg = al.get('mbid'), al.get('rg_mbid')
         if not mbid:
             mbid, rg = find_release(al['catalog'], al.get('artist', ''), al.get('title', ''))
         patch, cr, src = {}, [], None
-        if mbid:
+        if mbid and al.get('credits_source') != 'discogs':
             patch.update({'mbid': mbid, 'rg_mbid': rg})
             cr = mb_credits(mbid)
             src = 'musicbrainz' if cr else None
@@ -229,7 +246,7 @@ def main():
                         break
         if not cr:
             cr = discogs_credits(al['catalog'], al.get('artist', ''), al.get('title', ''))
-            src = 'discogs' if cr else None
+            src = 'discogs-v2' if cr else None
         if cr:
             patch['musician_list'] = [n for n, _ in cr]
             patch['musicians'] = fmt(cr)
@@ -238,6 +255,9 @@ def main():
         else:
             print('    · nessun credito trovato')
             stats['nessuna'] += 1
+            if al.get('credits_source') == 'discogs':  # svuota i dati vecchi non validati
+                patch['musician_list'] = []
+                patch['musicians'] = ''
         patch['credits_source'] = src
         patch['credits_checked_at'] = datetime.now(timezone.utc).isoformat()
         sb('PATCH', f'/rest/v1/albums?id=eq.{urllib.parse.quote(al["id"])}', patch, {'Prefer': 'return=minimal'})
