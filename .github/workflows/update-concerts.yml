@@ -1,0 +1,31 @@
+name: Update ECM Concerts
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Solo lettura, senza scrivere su Supabase'
+        type: boolean
+        default: false
+
+jobs:
+  concerts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Concerti da ecmrecords.com -> Supabase
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python update_concerts.py --dry-run
+          else
+            python update_concerts.py
+          fi
