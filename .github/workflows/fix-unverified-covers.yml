@@ -11,12 +11,17 @@ on:
         description: 'Con apply: togli la copertina agli album senza edizione verificata'
         type: boolean
         default: false
+      clear_catalogs:
+        description: 'Numeri di catalogo di cui togliere la copertina, separati da punto e virgola'
+        type: string
+        default: ''
 
 jobs:
   fix:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
+      CLEAR_CATALOGS:       ${{ inputs.clear_catalogs }}
       SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
     steps:
@@ -29,4 +34,8 @@ jobs:
           ARGS=""
           if [ "${{ inputs.apply }}" = "true" ]; then ARGS="--apply"; fi
           if [ "${{ inputs.clear_unmatched }}" = "true" ]; then ARGS="$ARGS --clear-unmatched"; fi
-          python fix_unverified_covers.py $ARGS
+          if [ -n "$CLEAR_CATALOGS" ]; then
+            python fix_unverified_covers.py --clear-catalogs "$CLEAR_CATALOGS"
+          else
+            python fix_unverified_covers.py $ARGS
+          fi
