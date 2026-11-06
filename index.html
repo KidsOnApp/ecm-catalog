@@ -67,6 +67,15 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 #album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
 .album-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;
   cursor:pointer;transition:all .2s;overflow:hidden;position:relative}
+.card-actions{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:6px;
+  padding:18px 6px 6px;background:linear-gradient(transparent,rgba(0,0,0,.75));opacity:0;
+  transition:opacity .15s;pointer-events:none}
+.album-card:hover .card-actions,.album-card:focus-within .card-actions{opacity:1;pointer-events:auto}
+@media (hover:none){.card-actions{opacity:1;pointer-events:auto;padding-top:6px;background:none;justify-content:flex-end}}
+.card-actions button{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.35);
+  background:rgba(20,20,20,.85);color:#fff;font-size:15px;line-height:1;cursor:pointer;padding:0}
+.card-actions button:hover{background:var(--accent);border-color:var(--accent)}
+.card-actions button.on{background:var(--accent);border-color:var(--accent)}
 .album-card:hover{border-color:var(--border2);transform:translateY(-2px);
   box-shadow:0 6px 20px rgba(0,0,0,.5)}
 .album-cover{width:100%;aspect-ratio:1;position:relative;overflow:hidden;background:var(--bg3)}
@@ -210,6 +219,14 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 @keyframes spin{to{transform:rotate(360deg)}}
 #loading-msg{font-size:12px;color:var(--text3)}
 
+/* ── LINGUE ── */
+#lang-switch{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.lang-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--border2);
+  color:var(--text3);border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer}
+.lang-btn .flag{display:inline-block;width:16px;height:11px;line-height:0;border-radius:1px;overflow:hidden}
+.lang-btn .flag svg{width:100%;height:100%;display:block}
+.lang-btn:hover{color:var(--text);border-color:var(--text3)}
+.lang-btn.active{color:var(--accent);border-color:var(--accent)}
 /* ── COPERTINA INGRANDITA ── */
 .album-cover img{transition:opacity .4s,transform .35s ease}
 .album-card:hover .album-cover img{transform:scale(1.12)}
@@ -231,27 +248,28 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 <!-- LOADING SCREEN -->
 <div id="loading-screen">
   <div class="spinner"></div>
-  <div id="loading-msg">Caricamento catalogo…</div>
+  <div id="loading-msg" data-i18n="loading">Caricamento catalogo…</div>
 </div>
 
 <!-- SIDEBAR -->
 <nav id="sidebar">
   <div id="sidebar-header">
     <h1>Nordicgrund</h1>
-    <p>Catalogo personale</p>
+    <p data-i18n="personal">Catalogo personale</p>
+    <div id="lang-switch"></div>
   </div>
   <div id="nav">
-    <div class="nav-section">Catalogo</div>
+    <div class="nav-section" data-i18n="secCatalog">Catalogo</div>
     <button class="nav-btn active" onclick="setView('all')" id="nav-all">
-      Tutto <span class="nav-count" id="cnt-all">0</span>
+      <span data-i18n="all">Tutto</span> <span class="nav-count" id="cnt-all">0</span>
     </button>
     <button class="nav-btn" onclick="setView('owned')" id="nav-owned">
-      Miei dischi <span class="nav-count" id="cnt-owned">0</span>
+      <span data-i18n="owned">Miei dischi</span> <span class="nav-count" id="cnt-owned">0</span>
     </button>
     <button class="nav-btn" onclick="setView('wishlist')" id="nav-wish">
-      Wishlist <span class="nav-count" id="cnt-wish">0</span>
+      <span data-i18n="wishlist">Wishlist</span> <span class="nav-count" id="cnt-wish">0</span>
     </button>
-    <div class="nav-section" style="margin-top:8px">Serie</div>
+    <div class="nav-section" style="margin-top:8px" data-i18n="secSeries">Serie</div>
     <button class="nav-btn" onclick="setView('series','ecm1')" id="nav-ecm1">
       ECM 1000 <span class="nav-count" id="cnt-ecm1">0</span>
     </button>
@@ -264,9 +282,15 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
     <button class="nav-btn" onclick="setView('series','japo')" id="nav-japo">
       JAPO <span class="nav-count" id="cnt-japo">0</span>
     </button>
-    <div class="nav-section" style="margin-top:8px">Concerti</div>
+    <button class="nav-btn" onclick="setView('series','works')" id="nav-works">
+      Works <span class="nav-count" id="cnt-works">0</span>
+    </button>
+    <button class="nav-btn" onclick="setView('series','selected')" id="nav-selected">
+      Selected Recordings <span class="nav-count" id="cnt-selected">0</span>
+    </button>
+    <div class="nav-section" style="margin-top:8px" data-i18n="secConcerts">Concerti</div>
     <button class="nav-btn" onclick="setView('live')" id="nav-live">
-      Artisti in concerto <span class="nav-count" id="cnt-live">0</span>
+      <span data-i18n="artistsLive">Artisti in concerto</span> <span class="nav-count" id="cnt-live">0</span>
     </button>
   </div>
   <div id="db-stats"></div>
@@ -275,18 +299,18 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 <!-- MAIN -->
 <div id="main">
   <div id="topbar">
-    <input id="search" type="search" placeholder="Cerca artista, titolo, catalogo…" oninput="onSearch(this.value)">
+    <input id="search" type="search" placeholder="Search" data-i18n-ph="search" oninput="onSearch(this.value)">
     <span id="results-info"></span>
   </div>
   <div id="filter-bar">
     <button class="filter-btn" id="fb-decade" onclick="toggleDecade()">Decade ▾</button>
     <div id="decade-pills" style="display:none;gap:5px;flex-wrap:wrap;display:none"></div>
     <select id="sort-select" onchange="onSort(this.value)">
-      <option value="cat">Catalogo</option>
-      <option value="year">Anno</option>
-      <option value="artist">Artista</option>
-      <option value="title">Titolo</option>
-      <option value="next">Prossimo concerto</option>
+      <option value="cat" data-i18n="sortCat">Catalogo</option>
+      <option value="year" data-i18n="sortYear">Anno</option>
+      <option value="artist" data-i18n="sortArtist">Artista</option>
+      <option value="title" data-i18n="sortTitle">Titolo</option>
+      <option value="next" data-i18n="sortNext">Prossimo concerto</option>
     </select>
   </div>
   <div id="artist-header">
@@ -296,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
   <div id="artist-concerts"></div>
   <div id="content">
     <div id="album-grid"></div>
-    <div id="empty"><h2>Nessun risultato</h2><p>Prova con altri termini di ricerca</p></div>
+    <div id="empty"><h2 data-i18n="noResults">Nessun risultato</h2><p data-i18n="tryOther">Prova con altri termini di ricerca</p></div>
   </div>
 </div>
 
@@ -321,23 +345,23 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
           <button class="btn btn-close" onclick="closeDetailDirect()">✕</button>
         </div>
         <div id="detail-purchase">
-          <label>Data di acquisto</label>
+          <label data-i18n="purchaseDate">Data di acquisto</label>
           <input type="date" id="purchase-date-input" onchange="savePurchaseDate(this.value)">
         </div>
       </div>
     </div>
     <div id="detail-sections">
       <div id="concerts-section" style="display:none">
-        <div class="section-title">Prossimi concerti <span id="concerts-count" style="color:var(--text3);font-weight:400"></span></div>
+        <div class="section-title"><span data-i18n="upcoming">Prossimi concerti</span> <span id="concerts-count" style="color:var(--text3);font-weight:400"></span></div>
         <div class="concert-list" id="concert-list"></div>
-        <div class="source-note">Date dal calendario di <a href="https://ecmrecords.com/concerts/" target="_blank" rel="noopener">ecmrecords.com</a>. Verifica sempre sul sito dell'organizzatore.</div>
+        <div class="source-note" id="source-note-album"></div>
       </div>
       <div id="related-section" style="display:none">
-        <div class="section-title">Album collegati <span id="related-count" style="color:var(--text3);font-weight:400"></span></div>
+        <div class="section-title"><span data-i18n="related">Album collegati</span> <span id="related-count" style="color:var(--text3);font-weight:400"></span></div>
         <div class="related-list" id="related-list"></div>
       </div>
       <div id="musicians-section" style="display:none">
-        <div class="section-title">Musicisti</div>
+        <div class="section-title" data-i18n="musicians">Musicisti</div>
         <div class="musician-list" id="musician-list"></div>
       </div>
       <div id="mb-links" style="display:none;flex-wrap:wrap;gap:6px 16px;padding-bottom:16px;border-top:1px solid var(--border);margin-top:14px"></div>
@@ -353,6 +377,138 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 // ═══════════════════════════════════════════════════════════
 const SB_URL  = 'https://clkrsdddcrwbajlcieug.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsa3JzZGRkY3J3YmFqbGNpZXVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0Nzk4MDMsImV4cCI6MjEwODA1NTgwM30.tca-MEzvmLIbspN_6S7KvuEBUv_CdfXxSgKfDG6_x0E';
+
+// ═══════════════════════════════════════════════════════════
+//  LINGUE (en predefinita)
+// ═══════════════════════════════════════════════════════════
+const I18N = {
+  en: {
+    titleTag:'Nordicgrund · discography catalog', loading:'Loading catalog…', loadingN:'Loading… {n} albums', loadError:'Loading error: ',
+    personal:'Personal catalog', secCatalog:'Catalog', all:'All', owned:'My records', wishlist:'Wishlist',
+    secSeries:'Series', secConcerts:'Concerts', artistsLive:'Artists on tour',
+    search:'Search artist, title, catalog…', decade:'Decade', sortCat:'Catalog', sortYear:'Year', sortArtist:'Artist', sortTitle:'Title', sortNext:'Next concert',
+    noResults:'No results', tryOther:'Try different search terms', purchaseDate:'Purchase date',
+    upcoming:'Upcoming concerts', sourceNote:'Dates from the {link} calendar. Always check the organizer\'s website.',
+    related:'Related albums', musicians:'Musicians', noCredits:'Credits not available', extLinks:'External links',
+    btnOwned:'✓ Owned', btnAdd:'+ Add', btnWishOn:'♡ On wishlist', quickOwned:'My collection', quickZoom:'Enlarge',
+    tribute:'tribute', withNames:'with {names}', moreOne:'Show the other concert', moreN:'Show the other {n} concerts',
+    liveDot:'A musician on this record is performing live',
+    liveOne:'{n} concert scheduled · next {date}, {place}', liveMany:'{n} concerts scheduled · next {date}, {place}',
+    statAlbums:'{n} albums in the catalog', statCovers:'{n} covers available', statOwned:'{o} owned · {w} wishlist',
+    statConcerts:'{n} concerts scheduled ({link})', ecmSource:'ECM source', resAlbums:'{n} albums', locale:'en-GB'
+  },
+  it: {
+    titleTag:'Nordicgrund · catalogo discografico', loading:'Caricamento catalogo…', loadingN:'Caricamento… {n} album', loadError:'Errore caricamento: ',
+    personal:'Catalogo personale', secCatalog:'Catalogo', all:'Tutto', owned:'Miei dischi', wishlist:'Wishlist',
+    secSeries:'Serie', secConcerts:'Concerti', artistsLive:'Artisti in concerto',
+    search:'Cerca artista, titolo, catalogo…', decade:'Decade', sortCat:'Catalogo', sortYear:'Anno', sortArtist:'Artista', sortTitle:'Titolo', sortNext:'Prossimo concerto',
+    noResults:'Nessun risultato', tryOther:'Prova con altri termini di ricerca', purchaseDate:'Data di acquisto',
+    upcoming:'Prossimi concerti', sourceNote:'Date dal calendario di {link}. Verifica sempre sul sito dell\'organizzatore.',
+    related:'Album collegati', musicians:'Musicisti', noCredits:'Crediti non disponibili', extLinks:'Link esterni',
+    btnOwned:'✓ Posseduto', btnAdd:'+ Aggiungi', btnWishOn:'♡ In wishlist', quickOwned:'La mia collezione', quickZoom:'Ingrandisci',
+    tribute:'omaggio', withNames:'con {names}', moreOne:'Mostra l\'altro concerto', moreN:'Mostra gli altri {n} concerti',
+    liveDot:'Un musicista di questo disco è in concerto',
+    liveOne:'{n} concerto in programma · prossimo {date}, {place}', liveMany:'{n} concerti in programma · prossimo {date}, {place}',
+    statAlbums:'{n} album nel catalogo', statCovers:'{n} copertine disponibili', statOwned:'{o} posseduti · {w} wishlist',
+    statConcerts:'{n} concerti in programma ({link})', ecmSource:'fonte ECM', resAlbums:'{n} album', locale:'it-IT'
+  },
+  fr: {
+    titleTag:'Nordicgrund · catalogue discographique', loading:'Chargement du catalogue…', loadingN:'Chargement… {n} albums', loadError:'Erreur de chargement : ',
+    personal:'Catalogue personnel', secCatalog:'Catalogue', all:'Tout', owned:'Mes disques', wishlist:'Liste de souhaits',
+    secSeries:'Séries', secConcerts:'Concerts', artistsLive:'Artistes en concert',
+    search:'Rechercher artiste, titre, catalogue…', decade:'Décennie', sortCat:'Catalogue', sortYear:'Année', sortArtist:'Artiste', sortTitle:'Titre', sortNext:'Prochain concert',
+    noResults:'Aucun résultat', tryOther:'Essayez d\'autres termes de recherche', purchaseDate:'Date d\'achat',
+    upcoming:'Prochains concerts', sourceNote:'Dates issues du calendrier de {link}. Vérifiez toujours sur le site de l\'organisateur.',
+    related:'Albums liés', musicians:'Musiciens', noCredits:'Crédits non disponibles', extLinks:'Liens externes',
+    btnOwned:'✓ Possédé', btnAdd:'+ Ajouter', btnWishOn:'♡ Dans la liste', quickOwned:'Ma collection', quickZoom:'Agrandir',
+    tribute:'hommage', withNames:'avec {names}', moreOne:'Afficher l\'autre concert', moreN:'Afficher les {n} autres concerts',
+    liveDot:'Un musicien de ce disque est en concert',
+    liveOne:'{n} concert prévu · prochain {date}, {place}', liveMany:'{n} concerts prévus · prochain {date}, {place}',
+    statAlbums:'{n} albums au catalogue', statCovers:'{n} pochettes disponibles', statOwned:'{o} possédés · {w} souhaits',
+    statConcerts:'{n} concerts prévus ({link})', ecmSource:'source ECM', resAlbums:'{n} albums', locale:'fr-FR'
+  },
+  de: {
+    titleTag:'Nordicgrund · Diskografie-Katalog', loading:'Katalog wird geladen…', loadingN:'Lädt… {n} Alben', loadError:'Ladefehler: ',
+    personal:'Persönlicher Katalog', secCatalog:'Katalog', all:'Alle', owned:'Meine Platten', wishlist:'Wunschliste',
+    secSeries:'Serien', secConcerts:'Konzerte', artistsLive:'Künstler live',
+    search:'Künstler, Titel, Katalog suchen…', decade:'Jahrzehnt', sortCat:'Katalog', sortYear:'Jahr', sortArtist:'Künstler', sortTitle:'Titel', sortNext:'Nächstes Konzert',
+    noResults:'Keine Ergebnisse', tryOther:'Versuchen Sie andere Suchbegriffe', purchaseDate:'Kaufdatum',
+    upcoming:'Kommende Konzerte', sourceNote:'Termine aus dem Kalender von {link}. Bitte immer auf der Website des Veranstalters prüfen.',
+    related:'Verwandte Alben', musicians:'Musiker', noCredits:'Credits nicht verfügbar', extLinks:'Externe Links',
+    btnOwned:'✓ Im Besitz', btnAdd:'+ Hinzufügen', btnWishOn:'♡ Auf der Wunschliste', quickOwned:'Meine Sammlung', quickZoom:'Vergrößern',
+    tribute:'Hommage', withNames:'mit {names}', moreOne:'Das andere Konzert anzeigen', moreN:'Die anderen {n} Konzerte anzeigen',
+    liveDot:'Ein Musiker dieser Platte spielt live',
+    liveOne:'{n} Konzert geplant · nächstes {date}, {place}', liveMany:'{n} Konzerte geplant · nächstes {date}, {place}',
+    statAlbums:'{n} Alben im Katalog', statCovers:'{n} Cover verfügbar', statOwned:'{o} im Besitz · {w} Wunschliste',
+    statConcerts:'{n} Konzerte geplant ({link})', ecmSource:'ECM-Quelle', resAlbums:'{n} Alben', locale:'de-DE'
+  },
+  es: {
+    titleTag:'Nordicgrund · catálogo discográfico', loading:'Cargando catálogo…', loadingN:'Cargando… {n} álbumes', loadError:'Error de carga: ',
+    personal:'Catálogo personal', secCatalog:'Catálogo', all:'Todo', owned:'Mis discos', wishlist:'Lista de deseos',
+    secSeries:'Series', secConcerts:'Conciertos', artistsLive:'Artistas en concierto',
+    search:'Buscar artista, título, catálogo…', decade:'Década', sortCat:'Catálogo', sortYear:'Año', sortArtist:'Artista', sortTitle:'Título', sortNext:'Próximo concierto',
+    noResults:'Sin resultados', tryOther:'Prueba con otros términos de búsqueda', purchaseDate:'Fecha de compra',
+    upcoming:'Próximos conciertos', sourceNote:'Fechas del calendario de {link}. Comprueba siempre en la web del organizador.',
+    related:'Álbumes relacionados', musicians:'Músicos', noCredits:'Créditos no disponibles', extLinks:'Enlaces externos',
+    btnOwned:'✓ En mi colección', btnAdd:'+ Añadir', btnWishOn:'♡ En la lista', quickOwned:'Mi colección', quickZoom:'Ampliar',
+    tribute:'homenaje', withNames:'con {names}', moreOne:'Mostrar el otro concierto', moreN:'Mostrar los otros {n} conciertos',
+    liveDot:'Un músico de este disco actúa en directo',
+    liveOne:'{n} concierto programado · próximo {date}, {place}', liveMany:'{n} conciertos programados · próximo {date}, {place}',
+    statAlbums:'{n} álbumes en el catálogo', statCovers:'{n} portadas disponibles', statOwned:'{o} en colección · {w} deseos',
+    statConcerts:'{n} conciertos programados ({link})', ecmSource:'fuente ECM', resAlbums:'{n} álbumes', locale:'es-ES'
+  }
+};
+const LANGS = ['en', 'it', 'fr', 'de', 'es'];
+let LANG = 'en';
+try { const sv = localStorage.getItem('ng_lang'); if (sv && I18N[sv]) LANG = sv; } catch (e) {}
+
+function t(key, v) {
+  let s = (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+  if (v) s = s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
+  return s;
+}
+const ECM_LINK = '<a href="https://ecmrecords.com/concerts/" target="_blank" rel="noopener">ecmrecords.com</a>';
+const sourceNoteHtml = () => t('sourceNote', { link: ECM_LINK });
+
+// Bandierine in SVG (le bandiere emoji non compaiono su Windows)
+const FLAGS = {
+  en: '<svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#012169"/><path d="M0 0L60 40M60 0L0 40" stroke="#fff" stroke-width="8"/><path d="M0 0L60 40M60 0L0 40" stroke="#C8102E" stroke-width="3"/><path d="M30 0V40M0 20H60" stroke="#fff" stroke-width="12"/><path d="M30 0V40M0 20H60" stroke="#C8102E" stroke-width="7"/></svg>',
+  it: '<svg viewBox="0 0 60 40"><rect width="20" height="40" fill="#009246"/><rect x="20" width="20" height="40" fill="#fff"/><rect x="40" width="20" height="40" fill="#CE2B37"/></svg>',
+  fr: '<svg viewBox="0 0 60 40"><rect width="20" height="40" fill="#0055A4"/><rect x="20" width="20" height="40" fill="#fff"/><rect x="40" width="20" height="40" fill="#EF4135"/></svg>',
+  de: '<svg viewBox="0 0 60 40"><rect width="60" height="14" fill="#000"/><rect y="13" width="60" height="14" fill="#DD0000"/><rect y="26" width="60" height="14" fill="#FFCE00"/></svg>',
+  es: '<svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#AA151B"/><rect y="10" width="60" height="20" fill="#F1BF00"/></svg>'
+};
+
+function buildLangSwitch() {
+  const box = document.getElementById('lang-switch');
+  box.innerHTML = LANGS.map(c =>
+    `<button class="lang-btn${c === LANG ? ' active' : ''}" onclick="setLang('${c}')" title="${c.toUpperCase()}" aria-label="${c.toUpperCase()}">` +
+    `<span class="flag">${FLAGS[c]}</span><span>${c.toUpperCase()}</span></button>`).join('');
+}
+
+function applyStaticI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t('titleTag');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  const dec = document.getElementById('fb-decade'); if (dec) dec.textContent = t('decade') + ' ▾';
+  const bw = document.getElementById('btn-wish'); if (bw) bw.textContent = '♡ ' + t('wishlist');
+  const sn = document.getElementById('source-note-album'); if (sn) sn.innerHTML = sourceNoteHtml();
+  buildLangSwitch();
+}
+
+function setLang(code) {
+  if (!I18N[code]) return;
+  LANG = code;
+  try { localStorage.setItem('ng_lang', code); } catch (e) {}
+  applyStaticI18n();
+  if (typeof ALBUMS !== 'undefined' && ALBUMS.length) {
+    updateCounts();
+    applyFilters();
+    if (openAlbum && document.getElementById('detail-overlay').classList.contains('open')) renderDetail();
+    if (currentArtist) renderArtistConcerts(false);
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 //  STATE
@@ -399,7 +555,7 @@ async function loadAlbums() {
   const PAGE = 1000;
   let offset = 0;
   while (true) {
-    msg.textContent = `Caricamento… ${all.length} album`;
+    msg.textContent = t('loadingN', { n: all.length });
     const batch = await sbGet(
       `/rest/v1/albums?select=id,catalog,year,artist,artist_list,title,notes,series,musicians,musician_list,cover_url,cover_ok,mbid,rg_mbid`
       + `&order=catalog&limit=${PAGE}&offset=${offset}`
@@ -452,7 +608,7 @@ async function init() {
     ALBUMS = albums;
     CONCERTS = concerts;
   } catch(e) {
-    document.getElementById('loading-msg').textContent = 'Errore caricamento: ' + e.message;
+    document.getElementById('loading-msg').textContent = t('loadError') + e.message;
     return;
   }
   linkAllConcerts();
@@ -474,6 +630,7 @@ function applyFilters() {
     if (currentView === 'owned'    && !owned[a.id])    return false;
     if (currentView === 'wishlist' && !wishlist[a.id]) return false;
     if (currentView === 'series'   && !seriesMatch(a, currentSeries)) return false;
+    if ((currentView === 'all' || currentView === 'live') && !currentArtist && !q && compKind(a)) return false;
     if (currentView === 'live'     && !albumLive(a).lead.length) return false;
     if (currentArtist && !artistMatch(a, currentArtist)) return false;
     if (activeDecade !== null) {
@@ -493,6 +650,18 @@ function applyFilters() {
   updateNavActive();
 }
 
+// Raccolte fuori dalla numerazione ECM: "Works" e "Selected Recordings" (rarum).
+function compKind(a) {
+  if (a._comp !== undefined) return a._comp;
+  const cat = a.catalog || '', t = a.title || '';
+  let k = null;
+  if (!/^(ECM|JAPO)\s*\d/i.test(cat)) {
+    if (/^rarum/i.test(cat) || /^Selected Recordings/i.test(t)) k = 'selected';
+    else if (/^Works\b/i.test(t)) k = 'works';
+  }
+  return (a._comp = k);
+}
+
 function seriesMatch(a, key) {
   const cat = (a.catalog || '').toUpperCase();
   const n   = parseInt((cat.match(/\d+/) || [0])[0]);
@@ -500,6 +669,7 @@ function seriesMatch(a, key) {
   if (key === 'ecm2') return /^ECM/.test(cat) && n >= 2000;
   if (key === 'ns')   return /NEW.?SERIES/i.test(a.series || '') || /^ECM\s*NS/i.test(cat);
   if (key === 'japo') return /^JAPO/i.test(cat);
+  if (key === 'works' || key === 'selected') return compKind(a) === key;
   return false;
 }
 
@@ -547,7 +717,7 @@ function personLive(name) {
 
 function fmtConcertDate(iso, withYear) {
   const d = new Date(iso + 'T12:00:00');
-  const s = d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+  const s = d.toLocaleDateString(t('locale'), { weekday: 'short', day: 'numeric', month: 'short' });
   return (withYear || d.getFullYear() !== new Date().getFullYear()) ? `${s} ${d.getFullYear()}` : s;
 }
 
@@ -557,7 +727,7 @@ function concertPlace(c) {
 
 function liveTitle(list) {
   const n = list.length, c = list[0];
-  return `${n} ${n === 1 ? 'concerto' : 'concerti'} in programma · prossimo ${fmtConcertDate(c.date)}, ${concertPlace(c)}`;
+  return t(n === 1 ? 'liveOne' : 'liveMany', { n, date: fmtConcertDate(c.date), place: concertPlace(c) });
 }
 
 // Una riga di concerto. keys: chiavi dei nomi da mettere in evidenza (album o artista aperto).
@@ -573,8 +743,8 @@ function concertRow(c, keys) {
   return `<div class="concert-row">
     <span class="concert-date">${esc(fmtConcertDate(c.date))}</span>
     <div class="concert-body">
-      <div class="concert-what">${esc(c.artist)}${tribute ? '<span class="concert-tag">omaggio</span>' : ''}</div>
-      ${withNames.length ? `<div class="concert-with">con ${esc(withNames.join(', '))}</div>` : ''}
+      <div class="concert-what">${esc(c.artist)}${tribute ? `<span class="concert-tag">${esc(t('tribute'))}</span>` : ''}</div>
+      ${withNames.length ? `<div class="concert-with">${esc(t('withNames', { names: withNames.join(', ') }))}</div>` : ''}
       ${info ? `<div class="concert-info">${esc(info)}</div>` : ''}
       <div class="concert-where">${esc(where)}</div>
     </div>
@@ -586,7 +756,7 @@ function concertListHtml(list, keys, max, moreId) {
   const shown = list.slice(0, max).map(c => concertRow(c, keys)).join('');
   const rest = list.length - max;
   return shown + (rest > 0
-    ? `<button class="concert-more" onclick="${moreId}">Mostra ${rest === 1 ? "l'altro concerto" : `gli altri ${rest} concerti`}</button>`
+    ? `<button class="concert-more" onclick="${moreId}">${esc(rest === 1 ? t('moreOne') : t('moreN', { n: rest }))}</button>`
     : '');
 }
 
@@ -605,7 +775,9 @@ function sortFiltered() {
       const nb = (albumLive(b).lead[0] || albumLive(b).all[0] || {}).date || '9999';
       if (na !== nb) return na.localeCompare(nb);
     }
-    // cat: natural sort by number
+    // cat: natural sort by number (le raccolte fuori numerazione in fondo)
+    const ca = compKind(a) ? 1 : 0, cb = compKind(b) ? 1 : 0;
+    if (ca !== cb) return ca - cb;
     const na = parseInt((a.catalog.match(/\d+/) || [0])[0]);
     const nb = parseInt((b.catalog.match(/\d+/) || [0])[0]);
     return na - nb;
@@ -640,13 +812,18 @@ function renderGrid() {
     const liveMark = lv.lead.length
       ? `<span class="live-badge" title="${esc(liveTitle(lv.lead))}">♪ Live</span>`
       : lv.all.length
-        ? `<span class="live-dot" title="Un musicista di questo disco è in concerto"></span>`
+        ? `<span class="live-dot" title="${esc(t('liveDot'))}"></span>`
         : '';
     return `<div class="album-card${lv.lead.length ? ' live-lead' : ''}" onclick="openDetail('${esc(a.id)}')"${lv.lead.length ? ` title="${esc(liveTitle(lv.lead))}"` : ''}>
       <div class="album-cover">
         <div class="album-cover-bg"><span class="album-cover-num">${esc(a.catalog)}</span></div>
         ${cover}
         ${liveMark}
+        <div class="card-actions">
+          <button class="${isWish ? 'on' : ''}" title="${esc(t('wishlist'))}" aria-label="${esc(t('wishlist'))}" onclick="quickToggle(event,'${esc(a.id)}','wish')">♡</button>
+          <button class="${isOwned ? 'on' : ''}" title="${esc(t('quickOwned'))}" aria-label="${esc(t('quickOwned'))}" onclick="quickToggle(event,'${esc(a.id)}','owned')">✓</button>
+          ${a.cover_url ? `<button title="${esc(t('quickZoom'))}" aria-label="${esc(t('quickZoom'))}" onclick="quickZoom(event,'${esc(a.id)}')">⤢</button>` : ''}
+        </div>
       </div>
       <div class="album-info">
         <div class="album-artist">${esc(a.artist)}</div>
@@ -673,13 +850,15 @@ function updateCounts() {
   const wishlist = getWishlist();
 
   const counts = {
-    all: ALBUMS.length,
+    all: ALBUMS.filter(a => !compKind(a)).length,
     owned: Object.keys(owned).filter(k => owned[k]).length,
     wishlist: Object.keys(wishlist).filter(k => wishlist[k]).length,
     ecm1: ALBUMS.filter(a => seriesMatch(a, 'ecm1')).length,
     ecm2: ALBUMS.filter(a => seriesMatch(a, 'ecm2')).length,
     ns:   ALBUMS.filter(a => seriesMatch(a, 'ns')).length,
     japo: ALBUMS.filter(a => seriesMatch(a, 'japo')).length,
+    works:    ALBUMS.filter(a => compKind(a) === 'works').length,
+    selected: ALBUMS.filter(a => compKind(a) === 'selected').length,
     live: ALBUMS.filter(a => albumLive(a).lead.length).length,
   };
   const withCover = ALBUMS.filter(a => a.cover_url).length;
@@ -691,23 +870,27 @@ function updateCounts() {
   document.getElementById('cnt-ecm2').textContent   = counts.ecm2;
   document.getElementById('cnt-ns').textContent     = counts.ns;
   document.getElementById('cnt-japo').textContent   = counts.japo;
+  document.getElementById('cnt-works').textContent    = counts.works;
+  document.getElementById('cnt-selected').textContent = counts.selected;
   document.getElementById('cnt-live').textContent   = counts.live;
 
   document.getElementById('db-stats').innerHTML =
-    `<strong>${counts.all}</strong> album nel catalogo<br>` +
-    `<strong>${withCover}</strong> copertine disponibili<br>` +
-    `<strong>${counts.owned}</strong> posseduti · <strong>${counts.wishlist}</strong> wishlist` +
+    `${t('statAlbums', { n: '<strong>' + ALBUMS.length + '</strong>' })}<br>` +
+    `${t('statCovers', { n: '<strong>' + withCover + '</strong>' })}<br>` +
+    t('statOwned', { o: '<strong>' + counts.owned + '</strong>', w: '<strong>' + counts.wishlist + '</strong>' }) +
     (CONCERTS.length
-      ? `<br><strong>${CONCERTS.length}</strong> concerti in programma ` +
-        `(<a href="https://ecmrecords.com/concerts/" target="_blank" rel="noopener" style="color:inherit">fonte ECM</a>)`
+      ? '<br>' + t('statConcerts', { n: '<strong>' + CONCERTS.length + '</strong>',
+          link: '<a href="https://ecmrecords.com/concerts/" target="_blank" rel="noopener" style="color:inherit">' + t('ecmSource') + '</a>' })
       : '');
 }
 
 function updateInfo() {
   const el = document.getElementById('results-info');
-  el.textContent = filtered.length === ALBUMS.length
-    ? `${ALBUMS.length} album`
-    : `${filtered.length} / ${ALBUMS.length}`;
+  const base = (currentView === 'all' && !currentArtist && !currentSearch)
+    ? ALBUMS.filter(a => !compKind(a)).length : ALBUMS.length;
+  el.textContent = filtered.length === base
+    ? t('resAlbums', { n: base })
+    : `${filtered.length} / ${base}`;
 }
 
 function updateNavActive() {
@@ -722,7 +905,7 @@ function updateNavActive() {
     document.getElementById(map[currentView])?.classList.add('active');
   }
   if (currentView === 'series') {
-    const ids = {'ecm1':'nav-ecm1','ecm2':'nav-ecm2','ns':'nav-ns','japo':'nav-japo'};
+    const ids = {'ecm1':'nav-ecm1','ecm2':'nav-ecm2','ns':'nav-ns','japo':'nav-japo','works':'nav-works','selected':'nav-selected'};
     document.getElementById(ids[currentSeries] || '')?.classList.add('active');
   }
 }
@@ -807,9 +990,9 @@ function renderArtistConcerts(showAll) {
   const list = currentArtist ? personLive(currentArtist) : [];
   if (!list.length) { box.classList.remove('open'); box.innerHTML = ''; return; }
   box.innerHTML =
-    `<div class="section-title">Prossimi concerti <span style="color:var(--text3);font-weight:400">(${list.length})</span></div>` +
+    `<div class="section-title">${esc(t('upcoming'))} <span style="color:var(--text3);font-weight:400">(${list.length})</span></div>` +
     `<div class="concert-list">${concertListHtml(list, nameKeys(currentArtist), showAll ? list.length : 4, 'renderArtistConcerts(true)')}</div>` +
-    `<div class="source-note">Date dal calendario di <a href="https://ecmrecords.com/concerts/" target="_blank" rel="noopener">ecmrecords.com</a>. Verifica sempre sul sito dell'organizzatore.</div>`;
+    `<div class="source-note">${sourceNoteHtml()}</div>`;
   box.classList.add('open');
 }
 
@@ -855,13 +1038,13 @@ function renderDetail() {
   // owned button
   const btnO = document.getElementById('btn-owned');
   if (owned[a.id]) {
-    btnO.textContent = '✓ Posseduto';
+    btnO.textContent = t('btnOwned');
     btnO.className = 'btn btn-owned-active';
     const dp = document.getElementById('detail-purchase');
     dp.style.display = 'block';
     document.getElementById('purchase-date-input').value = dates[a.id] || '';
   } else {
-    btnO.textContent = '+ Aggiungi';
+    btnO.textContent = t('btnAdd');
     btnO.className = 'btn btn-primary';
     document.getElementById('detail-purchase').style.display = 'none';
   }
@@ -869,10 +1052,10 @@ function renderDetail() {
   // wishlist button
   const btnW = document.getElementById('btn-wish');
   if (wishlist[a.id]) {
-    btnW.textContent = '♡ In wishlist';
+    btnW.textContent = t('btnWishOn');
     btnW.className = 'btn btn-wish-active';
   } else {
-    btnW.textContent = '♡ Wishlist';
+    btnW.textContent = '♡ ' + t('wishlist');
     btnW.className = 'btn btn-wish';
   }
 
@@ -881,7 +1064,7 @@ function renderDetail() {
   const ms = document.getElementById('musicians-section');
   const mTitle = ms.querySelector('.section-title');
   if (Array.isArray(a.musicianList) && a.musicianList.length) {
-    mTitle.textContent = 'Musicisti';
+    mTitle.textContent = t('musicians');
     ml.innerHTML = a.musicianList.map(m => {
       const lv = personLive(m);
       return `<span class="musician-tag${lv.length ? ' live' : ''}"`
@@ -890,12 +1073,12 @@ function renderDetail() {
     }).join('');
     ms.style.display = 'block';
   } else if (a.musicians) {
-    mTitle.textContent = 'Musicisti';
+    mTitle.textContent = t('musicians');
     ml.innerHTML = `<span style="font-size:11px;color:var(--text2);line-height:1.6">${esc(a.musicians)}</span>`;
     ms.style.display = 'block';
   } else {
-    mTitle.textContent = 'Musicisti';
-    ml.innerHTML = '<span class="no-credits">Crediti non disponibili</span>';
+    mTitle.textContent = t('musicians');
+    ml.innerHTML = `<span class="no-credits">${esc(t('noCredits'))}</span>`;
     ms.style.display = 'block';
   }
 
@@ -906,7 +1089,7 @@ function renderDetail() {
     if (a.rg_mbid) links += `<a class="mb-link" href="https://musicbrainz.org/release-group/${a.rg_mbid}" target="_blank" rel="noopener">MusicBrainz ↗</a>`;
     if (a.mbid)    links += `<a class="mb-link" href="https://musicbrainz.org/release/${a.mbid}" target="_blank" rel="noopener">Release ↗</a>`;
     if (a.rg_mbid) links += `<a class="mb-link" href="https://coverartarchive.org/release-group/${a.rg_mbid}" target="_blank" rel="noopener">Cover Art ↗</a>`;
-    mbSection.innerHTML = '<div class="section-title" style="width:100%;padding-bottom:2px">Link esterni</div>' + links;
+    mbSection.innerHTML = '<div class="section-title" style="width:100%;padding-bottom:2px">' + esc(t('extLinks')) + '</div>' + links;
     mbSection.style.display = 'flex';
   } else {
     mbSection.style.display = 'none';
@@ -1005,6 +1188,26 @@ function savePurchaseDate(val) {
   saveDates(dates);
 }
 
+// ── azioni rapide sulla copertina nella griglia ──
+function quickToggle(ev, id, kind) {
+  ev.stopPropagation();
+  const o = kind === 'owned' ? getOwned() : getWishlist();
+  o[id] = !o[id];
+  if (!o[id]) delete o[id];
+  if (kind === 'owned') saveOwned(o); else saveWishlist(o);
+  updateCounts();
+  if (currentView === 'owned' || currentView === 'wishlist') applyFilters(); else renderGrid();
+}
+function quickZoom(ev, id) {
+  ev.stopPropagation();
+  const a = ALBUMS.find(x => x.id === id);
+  if (!a || !a.cover_url) return;
+  document.getElementById('lb-img').src = a.cover_url;
+  document.getElementById('lb-cap').innerHTML =
+    `${esc(a.title)}<small>${esc(a.artist)} · ${esc(a.catalog)} ${esc(a.year)}</small>`;
+  document.getElementById('lightbox').classList.add('open');
+}
+
 // ── copertina a tutto schermo ──
 function openLightbox() {
   const src = document.getElementById('detail-cover-img').getAttribute('src');
@@ -1031,6 +1234,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  START
 // ═══════════════════════════════════════════════════════════
+applyStaticI18n();
 init();
 </script>
 </body>
