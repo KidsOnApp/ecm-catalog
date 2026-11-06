@@ -1,0 +1,35 @@
+name: Find Alternative Covers
+
+on:
+  workflow_dispatch:
+    inputs:
+      catalogs:
+        description: 'Numeri di catalogo separati da punto e virgola'
+        type: string
+        default: 'ECM 1313;ECM 1729;ECM 1825;ECM 1909/10;ECM 1926/27;ECM 2001/02;ECM 2043;ECM 2197;ECM 2427;rarum 8006;rarum 8090'
+      apply:
+        description: 'Applica (se spento: solo simulazione)'
+        type: boolean
+        default: false
+
+jobs:
+  find:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CATALOGS:             ${{ inputs.catalogs }}
+      SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      DISCOGS_TOKEN:        ${{ secrets.DISCOGS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Cerca copertine alternative
+        run: |
+          if [ "${{ inputs.apply }}" = "true" ]; then
+            python find_alt_covers.py --catalogs "$CATALOGS" --apply
+          else
+            python find_alt_covers.py --catalogs "$CATALOGS"
+          fi
