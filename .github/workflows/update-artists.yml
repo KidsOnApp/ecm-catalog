@@ -1,0 +1,38 @@
+name: Update Artist Bios
+
+on:
+  workflow_dispatch:
+    inputs:
+      top:
+        description: 'Quanti artisti (i piu presenti nel catalogo)'
+        type: string
+        default: '150'
+      names:
+        description: 'Oppure nomi precisi separati da punto e virgola (ha la precedenza)'
+        type: string
+        default: ''
+      apply:
+        description: 'Applica (se spento: solo simulazione)'
+        type: boolean
+        default: false
+
+jobs:
+  artists:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TOP:                  ${{ inputs.top }}
+      NAMES:                ${{ inputs.names }}
+      SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Biografie e foto da Wikipedia
+        run: |
+          args=(--top "$TOP")
+          if [ -n "$NAMES" ]; then args=(--names "$NAMES"); fi
+          if [ "${{ inputs.apply }}" = "true" ]; then args+=(--apply); fi
+          python update_artists.py "${args[@]}"
