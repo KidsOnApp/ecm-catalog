@@ -219,6 +219,17 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 @keyframes spin{to{transform:rotate(360deg)}}
 #loading-msg{font-size:12px;color:var(--text3)}
 
+/* ── BIOGRAFIA ARTISTA ── */
+#artist-bio{display:none;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);gap:14px;align-items:flex-start}
+#artist-bio.open{display:flex}
+#artist-bio img{width:96px;height:96px;object-fit:cover;border-radius:6px;flex:none;background:var(--bg3)}
+#artist-bio .bio-body{min-width:0;flex:1}
+#artist-bio .bio-text{font-size:13px;line-height:1.55;color:var(--text2);white-space:pre-line;cursor:pointer;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+#artist-bio .bio-text.open{display:block}
+#artist-bio .bio-credit{font-size:10.5px;color:var(--text3);margin-top:6px;line-height:1.5}
+#artist-bio .bio-credit a{color:inherit;text-decoration:underline dotted}
+@media (max-width:600px){#artist-bio{flex-direction:column}#artist-bio img{width:72px;height:72px}}
 /* ── LINGUE ── */
 #lang-switch{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
 .lang-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--border2);
@@ -314,6 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
     <button id="artist-back" onclick="clearArtist()">←</button>
     <span id="artist-name-display"></span>
   </div>
+  <div id="artist-bio"></div>
   <div id="artist-concerts"></div>
   <div id="content">
     <div id="album-grid"></div>
@@ -392,7 +404,8 @@ const I18N = {
     liveDot:'A musician on this record is performing live',
     liveOne:'{n} concert scheduled · next {date}, {place}', liveMany:'{n} concerts scheduled · next {date}, {place}',
     statAlbums:'{n} albums in the catalog', statCovers:'{n} covers available', statOwned:'{o} owned · {w} wishlist',
-    statConcerts:'{n} concerts scheduled ({link})', ecmSource:'ECM source', resAlbums:'{n} albums', locale:'en-GB'
+    statConcerts:'{n} concerts scheduled ({link})', ecmSource:'ECM source', resAlbums:'{n} albums', locale:'en-GB',
+    bioFrom:'Biography from {link}, licensed CC BY-SA.', photoCredit:'Photo: {credit}, {license}, via {link}.', bioToggle:'Click the text to expand or collapse'
   },
   it: {
     titleTag:'Nordicgrund · catalogo discografico', loading:'Caricamento catalogo…', loadingN:'Caricamento… {n} album', loadError:'Errore caricamento: ',
@@ -407,7 +420,8 @@ const I18N = {
     liveDot:'Un musicista di questo disco è in concerto',
     liveOne:'{n} concerto in programma · prossimo {date}, {place}', liveMany:'{n} concerti in programma · prossimo {date}, {place}',
     statAlbums:'{n} album nel catalogo', statCovers:'{n} copertine disponibili', statOwned:'{o} posseduti · {w} wishlist',
-    statConcerts:'{n} concerti in programma ({link})', ecmSource:'fonte ECM', resAlbums:'{n} album', locale:'it-IT'
+    statConcerts:'{n} concerti in programma ({link})', ecmSource:'fonte ECM', resAlbums:'{n} album', locale:'it-IT',
+    bioFrom:'Biografia da {link}, licenza CC BY-SA.', photoCredit:'Foto: {credit}, {license}, tramite {link}.', bioToggle:'Clic sul testo per espandere o ridurre'
   },
   fr: {
     titleTag:'Nordicgrund · catalogue discographique', loading:'Chargement du catalogue…', loadingN:'Chargement… {n} albums', loadError:'Erreur de chargement : ',
@@ -422,7 +436,8 @@ const I18N = {
     liveDot:'Un musicien de ce disque est en concert',
     liveOne:'{n} concert prévu · prochain {date}, {place}', liveMany:'{n} concerts prévus · prochain {date}, {place}',
     statAlbums:'{n} albums au catalogue', statCovers:'{n} pochettes disponibles', statOwned:'{o} possédés · {w} souhaits',
-    statConcerts:'{n} concerts prévus ({link})', ecmSource:'source ECM', resAlbums:'{n} albums', locale:'fr-FR'
+    statConcerts:'{n} concerts prévus ({link})', ecmSource:'source ECM', resAlbums:'{n} albums', locale:'fr-FR',
+    bioFrom:'Biographie issue de {link}, licence CC BY-SA.', photoCredit:'Photo : {credit}, {license}, via {link}.', bioToggle:'Cliquez sur le texte pour développer ou réduire'
   },
   de: {
     titleTag:'Nordicgrund · Diskografie-Katalog', loading:'Katalog wird geladen…', loadingN:'Lädt… {n} Alben', loadError:'Ladefehler: ',
@@ -437,7 +452,8 @@ const I18N = {
     liveDot:'Ein Musiker dieser Platte spielt live',
     liveOne:'{n} Konzert geplant · nächstes {date}, {place}', liveMany:'{n} Konzerte geplant · nächstes {date}, {place}',
     statAlbums:'{n} Alben im Katalog', statCovers:'{n} Cover verfügbar', statOwned:'{o} im Besitz · {w} Wunschliste',
-    statConcerts:'{n} Konzerte geplant ({link})', ecmSource:'ECM-Quelle', resAlbums:'{n} Alben', locale:'de-DE'
+    statConcerts:'{n} Konzerte geplant ({link})', ecmSource:'ECM-Quelle', resAlbums:'{n} Alben', locale:'de-DE',
+    bioFrom:'Biografie von {link}, Lizenz CC BY-SA.', photoCredit:'Foto: {credit}, {license}, über {link}.', bioToggle:'Text anklicken zum Ein- oder Ausklappen'
   },
   es: {
     titleTag:'Nordicgrund · catálogo discográfico', loading:'Cargando catálogo…', loadingN:'Cargando… {n} álbumes', loadError:'Error de carga: ',
@@ -452,7 +468,8 @@ const I18N = {
     liveDot:'Un músico de este disco actúa en directo',
     liveOne:'{n} concierto programado · próximo {date}, {place}', liveMany:'{n} conciertos programados · próximo {date}, {place}',
     statAlbums:'{n} álbumes en el catálogo', statCovers:'{n} portadas disponibles', statOwned:'{o} en colección · {w} deseos',
-    statConcerts:'{n} conciertos programados ({link})', ecmSource:'fuente ECM', resAlbums:'{n} álbumes', locale:'es-ES'
+    statConcerts:'{n} conciertos programados ({link})', ecmSource:'fuente ECM', resAlbums:'{n} álbumes', locale:'es-ES',
+    bioFrom:'Biografía de {link}, licencia CC BY-SA.', photoCredit:'Foto: {credit}, {license}, vía {link}.', bioToggle:'Haz clic en el texto para ampliar o reducir'
   }
 };
 const LANGS = ['en', 'it', 'fr', 'de', 'es'];
@@ -503,7 +520,7 @@ function setLang(code) {
     updateCounts();
     applyFilters();
     if (openAlbum && document.getElementById('detail-overlay').classList.contains('open')) renderDetail();
-    if (currentArtist) renderArtistConcerts(false);
+    if (currentArtist) { renderArtistBio(); renderArtistConcerts(false); }
   }
 }
 
@@ -520,6 +537,7 @@ let currentSort   = 'cat';
 let decadeOpen    = false;
 let activeDecade  = null;
 let openAlbum     = null;
+let ARTISTS       = {};          // biografie e foto dalla tabella `artists`
 let CONCERTS      = [];          // concerti futuri dalla tabella `concerts`
 let LIVE          = new Map();   // chiave nome normalizzato -> concerti
 
@@ -581,6 +599,19 @@ async function loadAlbums() {
   }));
 }
 
+// Biografie e foto (Wikipedia). Se la tabella non esiste o e' vuota il sito funziona senza.
+async function loadArtists() {
+  try {
+    const rows = await sbGet('/rest/v1/artists?select=name,bio,photo_url,photo_credit,photo_license,photo_page&limit=1000');
+    const m = {};
+    (Array.isArray(rows) ? rows : []).forEach(r => { m[r.name] = r; });
+    return m;
+  } catch (e) {
+    console.warn('Biografie non disponibili:', e.message);
+    return {};
+  }
+}
+
 // Concerti futuri. Se la tabella non esiste o non risponde, il sito funziona senza.
 async function loadConcerts() {
   const today = new Date().toISOString().slice(0, 10);
@@ -601,8 +632,9 @@ async function loadConcerts() {
 // ═══════════════════════════════════════════════════════════
 async function init() {
   try {
-    const [albums, concerts] = await Promise.all([loadAlbums(), loadConcerts()]);
+    const [albums, concerts, artists] = await Promise.all([loadAlbums(), loadConcerts(), loadArtists()]);
     ALBUMS = albums;
+    ARTISTS = artists;
     CONCERTS = concerts;
   } catch(e) {
     document.getElementById('loading-msg').textContent = t('loadError') + e.message;
@@ -912,6 +944,7 @@ function setView(view, series) {
   currentView   = view;
   currentSeries = series || null;
   currentArtist = null;
+  renderArtistBio();
   document.getElementById('artist-header').classList.remove('open');
   document.getElementById('artist-concerts').classList.remove('open');
   if (view === 'live') {
@@ -965,6 +998,7 @@ function setDecade(d) {
 
 function clearArtist() {
   currentArtist = null;
+  renderArtistBio();
   document.getElementById('artist-header').classList.remove('open');
   document.getElementById('artist-concerts').classList.remove('open');
   applyFilters();
@@ -975,8 +1009,29 @@ function filterByArtist(name) {
   currentArtist = name;
   document.getElementById('artist-header').classList.add('open');
   document.getElementById('artist-name-display').textContent = name;
+  renderArtistBio();
   renderArtistConcerts(false);
   applyFilters();
+}
+
+// Scheda biografia (testo e foto da Wikipedia / Wikimedia Commons, con attribuzione).
+function renderArtistBio() {
+  const box = document.getElementById('artist-bio');
+  const r = currentArtist ? ARTISTS[currentArtist] : null;
+  const b = r && r.bio && (r.bio[LANG] || r.bio.en);
+  if (!b || !b.text) { box.classList.remove('open'); box.innerHTML = ''; return; }
+  const wp = `<a href="${esc(b.url)}" target="_blank" rel="noopener">Wikipedia</a>`;
+  let credit = t('bioFrom', { link: wp });
+  if (r.photo_url) {
+    const cm = r.photo_page
+      ? `<a href="${esc(r.photo_page)}" target="_blank" rel="noopener">Wikimedia Commons</a>` : 'Wikimedia Commons';
+    credit += ' ' + t('photoCredit', { credit: esc(r.photo_credit || ''), license: esc(r.photo_license || ''), link: cm });
+  }
+  box.innerHTML =
+    (r.photo_url ? `<img src="${esc(r.photo_url)}" alt="" loading="lazy">` : '') +
+    `<div class="bio-body"><div class="bio-text" title="${esc(t('bioToggle'))}" onclick="this.classList.toggle('open')">${esc(b.text)}</div>` +
+    `<div class="bio-credit">${credit}</div></div>`;
+  box.classList.add('open');
 }
 
 // Striscia dei concerti sotto il nome dell'artista selezionato.
