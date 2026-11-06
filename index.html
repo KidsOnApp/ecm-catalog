@@ -682,7 +682,7 @@ function updateCounts() {
     japo: ALBUMS.filter(a => seriesMatch(a, 'japo')).length,
     live: ALBUMS.filter(a => albumLive(a).lead.length).length,
   };
-  const withCover = ALBUMS.filter(a => a.cover_ok).length;
+  const withCover = ALBUMS.filter(a => a.cover_url).length;
 
   document.getElementById('cnt-all').textContent   = counts.all;
   document.getElementById('cnt-owned').textContent  = counts.owned;

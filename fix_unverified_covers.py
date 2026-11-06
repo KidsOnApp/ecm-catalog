@@ -15,7 +15,12 @@ MusicBrainz usando il numero di catalogo esatto.
 - Con --clear-unmatched (solo insieme a --apply) toglie la copertina agli album
   per cui non si trova nessuna edizione verificata.
 
+- Con --clear-catalogs "ECM 1313;ECM 2001/02" toglie la copertina agli album indicati
+  (elenco separato da punto e virgola) e li segna come 'senza copertina voluta':
+  cover_url vuoto e cover_ok vero, cosi' download_covers.py non la rimette.
+
 Uso:  python fix_unverified_covers.py [--apply] [--clear-unmatched] [--limit N]
+      python fix_unverified_covers.py --clear-catalogs "ECM 1313;ECM 2001/02"
 Env:  SUPABASE_URL, SUPABASE_SERVICE_KEY
 """
 import argparse, json, os, re, sys, time
@@ -135,11 +140,24 @@ def main():
     ap.add_argument('--apply', action='store_true')
     ap.add_argument('--clear-unmatched', action='store_true')
     ap.add_argument('--limit', type=int, default=0)
+    ap.add_argument('--clear-catalogs', default='')
     a = ap.parse_args()
     URL = (os.environ.get('SUPABASE_URL') or '').strip().rstrip('/')
     KEY = (os.environ.get('SUPABASE_SERVICE_KEY') or '').strip()
     if not URL or not KEY:
         sys.exit('ERRORE: servono SUPABASE_URL e SUPABASE_SERVICE_KEY')
+
+    if a.clear_catalogs.strip():
+        cats = [c.strip() for c in a.clear_catalogs.split(';') if c.strip()]
+        done = 0
+        for c in cats:
+            r = sb('PATCH', f'/rest/v1/albums?catalog=eq.{urllib.parse.quote(c)}',
+                   {'cover_url': None, 'cover_ok': True}, {'Prefer': 'return=representation'})
+            n = len(r) if isinstance(r, list) else 0
+            print(f'{"OK     " if n else "NON TROVATO"} {c} ({n} righe)')
+            done += 1 if n else 0
+        print(f'\nRIEPILOGO: {done}/{len(cats)} copertine tolte')
+        return
 
     albums = load_albums()
     if a.limit:
