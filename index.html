@@ -279,9 +279,6 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
     <button class="nav-btn" onclick="setView('series','ns')" id="nav-ns">
       ECM New Series <span class="nav-count" id="cnt-ns">0</span>
     </button>
-    <button class="nav-btn" onclick="setView('series','japo')" id="nav-japo">
-      JAPO <span class="nav-count" id="cnt-japo">0</span>
-    </button>
     <button class="nav-btn" onclick="setView('series','works')" id="nav-works">
       Works <span class="nav-count" id="cnt-works">0</span>
     </button>
@@ -856,7 +853,6 @@ function updateCounts() {
     ecm1: ALBUMS.filter(a => seriesMatch(a, 'ecm1')).length,
     ecm2: ALBUMS.filter(a => seriesMatch(a, 'ecm2')).length,
     ns:   ALBUMS.filter(a => seriesMatch(a, 'ns')).length,
-    japo: ALBUMS.filter(a => seriesMatch(a, 'japo')).length,
     works:    ALBUMS.filter(a => compKind(a) === 'works').length,
     selected: ALBUMS.filter(a => compKind(a) === 'selected').length,
     live: ALBUMS.filter(a => albumLive(a).lead.length).length,
@@ -869,7 +865,6 @@ function updateCounts() {
   document.getElementById('cnt-ecm1').textContent   = counts.ecm1;
   document.getElementById('cnt-ecm2').textContent   = counts.ecm2;
   document.getElementById('cnt-ns').textContent     = counts.ns;
-  document.getElementById('cnt-japo').textContent   = counts.japo;
   document.getElementById('cnt-works').textContent    = counts.works;
   document.getElementById('cnt-selected').textContent = counts.selected;
   document.getElementById('cnt-live').textContent   = counts.live;
@@ -905,7 +900,7 @@ function updateNavActive() {
     document.getElementById(map[currentView])?.classList.add('active');
   }
   if (currentView === 'series') {
-    const ids = {'ecm1':'nav-ecm1','ecm2':'nav-ecm2','ns':'nav-ns','japo':'nav-japo','works':'nav-works','selected':'nav-selected'};
+    const ids = {'ecm1':'nav-ecm1','ecm2':'nav-ecm2','ns':'nav-ns','works':'nav-works','selected':'nav-selected'};
     document.getElementById(ids[currentSeries] || '')?.classList.add('active');
   }
 }
