@@ -1,0 +1,32 @@
+name: Fix Unverified Covers
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Applica le correzioni (se spento: solo simulazione)'
+        type: boolean
+        default: false
+      clear_unmatched:
+        description: 'Con apply: togli la copertina agli album senza edizione verificata'
+        type: boolean
+        default: false
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verifica copertine senza MBID
+        run: |
+          ARGS=""
+          if [ "${{ inputs.apply }}" = "true" ]; then ARGS="--apply"; fi
+          if [ "${{ inputs.clear_unmatched }}" = "true" ]; then ARGS="$ARGS --clear-unmatched"; fi
+          python fix_unverified_covers.py $ARGS
