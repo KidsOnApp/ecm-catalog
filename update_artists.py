@@ -15,7 +15,7 @@ Per default e' una simulazione; con --apply scrive su Supabase.
 Uso:  python update_artists.py [--top 150] [--min-albums 3] [--names "A;B"] [--apply]
 Env:  SUPABASE_URL, SUPABASE_SERVICE_KEY
 """
-import argparse, html, json, os, re, sys, time
+import argparse, difflib, html, json, os, re, sys, time, unicodedata
 import urllib.error, urllib.parse, urllib.request
 from collections import Counter
 from datetime import datetime, timezone
@@ -96,6 +96,28 @@ def top_artists(top, min_albums):
     return [(n, c) for n, c in names.most_common(top) if c >= min_albums]
 
 
+def _norm(x):
+    x = unicodedata.normalize('NFKD', x or '')
+    x = ''.join(c for c in x if not unicodedata.combining(c)).lower()
+    x = re.sub(r'[^a-z0-9]+', ' ', x).strip()
+    return re.sub(r'^the ', '', x)
+
+
+def name_ok(name, title):
+    """Il titolo della pagina deve somigliare davvero al nome cercato."""
+    a, b = _norm(name), _norm(re.sub(r'\s*\(.*\)$', '', title))
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    if (a in b or b in a) and abs(len(a) - len(b)) <= 6:
+        return True
+    ta, tb = a.split(), b.split()
+    if len(ta) > 1 and len(tb) > 1 and ta[-1] == tb[-1] and ta[0][0] == tb[0][0]:
+        return True
+    return difflib.SequenceMatcher(None, a, b).ratio() >= 0.85
+
+
 def find_en_page(name):
     titles = [name + s for s in SUFFIXES]
     for i in range(0, len(titles), 50):
@@ -109,6 +131,8 @@ def find_en_page(name):
             if 'missing' in p or 'disambiguation' in (p.get('pageprops') or {}):
                 continue
             ex = p.get('extract') or ''
+            if not name_ok(name, p['title']):
+                continue
             if 'may refer to' in ex[:200] or not MUSIC.search(ex[:600]):
                 continue
             asked = redir.get(p['title'], p['title'])
