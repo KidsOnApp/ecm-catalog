@@ -219,6 +219,24 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 @keyframes spin{to{transform:rotate(360deg)}}
 #loading-msg{font-size:12px;color:var(--text3)}
 
+/* ── PAGINA ARTISTI IN CONCERTO ── */
+#live-page{display:none;padding:16px;overflow-y:auto;flex:1}
+#live-page.open{display:block}
+.live-tools{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.live-tools select{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;font-size:12px}
+.live-tools .live-n{font-size:12px;color:var(--text3)}
+#live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.live-card{display:flex;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;cursor:pointer}
+.live-card:hover{border-color:var(--text3)}
+.live-photo{width:64px;height:64px;border-radius:50%;flex:none;background:var(--bg3);object-fit:cover;display:flex;
+  align-items:center;justify-content:center;font-size:22px;color:var(--text3);overflow:hidden}
+.live-photo img{width:100%;height:100%;object-fit:cover}
+.live-info{min-width:0;flex:1}
+.live-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.live-next{font-size:12px;color:var(--text2);margin-top:3px;line-height:1.4}
+.live-meta{font-size:11px;color:var(--text3);margin-top:3px}
+.live-disco{margin-top:7px;background:none;border:1px solid var(--border2);color:var(--accent);border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer}
+.live-disco:hover{border-color:var(--accent)}
 /* ── BIOGRAFIA ARTISTA ── */
 #artist-bio{display:none;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);gap:14px;align-items:flex-start}
 #artist-bio.open{display:flex}
@@ -327,6 +345,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
   </div>
   <div id="artist-bio"></div>
   <div id="artist-concerts"></div>
+  <div id="live-page"></div>
   <div id="content">
     <div id="album-grid"></div>
     <div id="empty"><h2 data-i18n="noResults">Nessun risultato</h2><p data-i18n="tryOther">Prova con altri termini di ricerca</p></div>
@@ -405,6 +424,7 @@ const I18N = {
     liveOne:'{n} concert scheduled · next {date}, {place}', liveMany:'{n} concerts scheduled · next {date}, {place}',
     statAlbums:'{n} albums in the catalog', statCovers:'{n} covers available', statOwned:'{o} owned · {w} wishlist',
     statConcerts:'{n} concerts scheduled ({link})', ecmSource:'ECM source', resAlbums:'{n} albums', locale:'en-GB',
+    allCountries:'All countries', nArtists:'{n} artists', nConcerts:'Concerts: {n}', discography:'Discography ({n})', nextLabel:'Next: ',
     bioFrom:'Biography from {link}, licensed CC BY-SA.', photoCredit:'Photo: {credit}, {license}, via {link}.', bioToggle:'Click the text to expand or collapse'
   },
   it: {
@@ -421,6 +441,7 @@ const I18N = {
     liveOne:'{n} concerto in programma · prossimo {date}, {place}', liveMany:'{n} concerti in programma · prossimo {date}, {place}',
     statAlbums:'{n} album nel catalogo', statCovers:'{n} copertine disponibili', statOwned:'{o} posseduti · {w} wishlist',
     statConcerts:'{n} concerti in programma ({link})', ecmSource:'fonte ECM', resAlbums:'{n} album', locale:'it-IT',
+    allCountries:'Tutti i paesi', nArtists:'{n} artisti', nConcerts:'Concerti: {n}', discography:'Discografia ({n})', nextLabel:'Prossimo: ',
     bioFrom:'Biografia da {link}, licenza CC BY-SA.', photoCredit:'Foto: {credit}, {license}, tramite {link}.', bioToggle:'Clic sul testo per espandere o ridurre'
   },
   fr: {
@@ -437,6 +458,7 @@ const I18N = {
     liveOne:'{n} concert prévu · prochain {date}, {place}', liveMany:'{n} concerts prévus · prochain {date}, {place}',
     statAlbums:'{n} albums au catalogue', statCovers:'{n} pochettes disponibles', statOwned:'{o} possédés · {w} souhaits',
     statConcerts:'{n} concerts prévus ({link})', ecmSource:'source ECM', resAlbums:'{n} albums', locale:'fr-FR',
+    allCountries:'Tous les pays', nArtists:'{n} artistes', nConcerts:'Concerts: {n}', discography:'Discographie ({n})', nextLabel:'Prochain : ',
     bioFrom:'Biographie issue de {link}, licence CC BY-SA.', photoCredit:'Photo : {credit}, {license}, via {link}.', bioToggle:'Cliquez sur le texte pour développer ou réduire'
   },
   de: {
@@ -453,6 +475,7 @@ const I18N = {
     liveOne:'{n} Konzert geplant · nächstes {date}, {place}', liveMany:'{n} Konzerte geplant · nächstes {date}, {place}',
     statAlbums:'{n} Alben im Katalog', statCovers:'{n} Cover verfügbar', statOwned:'{o} im Besitz · {w} Wunschliste',
     statConcerts:'{n} Konzerte geplant ({link})', ecmSource:'ECM-Quelle', resAlbums:'{n} Alben', locale:'de-DE',
+    allCountries:'Alle Länder', nArtists:'{n} Künstler', nConcerts:'Konzerte: {n}', discography:'Diskografie ({n})', nextLabel:'Nächstes: ',
     bioFrom:'Biografie von {link}, Lizenz CC BY-SA.', photoCredit:'Foto: {credit}, {license}, über {link}.', bioToggle:'Text anklicken zum Ein- oder Ausklappen'
   },
   es: {
@@ -469,6 +492,7 @@ const I18N = {
     liveOne:'{n} concierto programado · próximo {date}, {place}', liveMany:'{n} conciertos programados · próximo {date}, {place}',
     statAlbums:'{n} álbumes en el catálogo', statCovers:'{n} portadas disponibles', statOwned:'{o} en colección · {w} deseos',
     statConcerts:'{n} conciertos programados ({link})', ecmSource:'fuente ECM', resAlbums:'{n} álbumes', locale:'es-ES',
+    allCountries:'Todos los países', nArtists:'{n} artistas', nConcerts:'Conciertos: {n}', discography:'Discografía ({n})', nextLabel:'Próximo: ',
     bioFrom:'Biografía de {link}, licencia CC BY-SA.', photoCredit:'Foto: {credit}, {license}, vía {link}.', bioToggle:'Haz clic en el texto para ampliar o reducir'
   }
 };
@@ -673,8 +697,12 @@ function applyFilters() {
     return true;
   });
 
+  const livePage = currentView === 'live' && !currentArtist;
+  document.getElementById('live-page').classList.toggle('open', livePage);
+  document.getElementById('content').style.display = livePage ? 'none' : '';
+  if (livePage) renderLivePage();
   sortFiltered();
-  renderGrid();
+  if (!livePage) renderGrid();
   updateInfo();
   updateNavActive();
 }
@@ -738,6 +766,51 @@ function albumLive(a) {
   const list = [...all.values()].sort((x, y) => x.date.localeCompare(y.date));
   const lead = list.filter(c => c.matches.some(m => leadKeys.has(m.key) && !m.tribute));
   return (a._live = { all: list, lead, leadKeys });
+}
+
+// ── Pagina "Artisti in concerto": un artista per scheda, con filtro per paese ──
+let liveCountry = '';
+function liveArtists() {
+  if (LIVE_ART && LIVE_ART.src === CONCERTS) return LIVE_ART.list;
+  const m = new Map();
+  for (const c of CONCERTS) for (const x of (c.matches || [])) {
+    if (x.tribute || !x.name) continue;
+    if (!m.has(x.name)) m.set(x.name, new Map());
+    m.get(x.name).set(c.id, c);
+  }
+  const list = [...m].map(([name, cs]) => ({ name, concerts: [...cs.values()].sort((a, b) => a.date.localeCompare(b.date)) }))
+    .sort((a, b) => a.concerts[0].date.localeCompare(b.concerts[0].date) || a.name.localeCompare(b.name));
+  LIVE_ART = { src: CONCERTS, list };
+  return list;
+}
+let LIVE_ART = null;
+function setLiveCountry(v) { liveCountry = v; renderLivePage(); }
+function discoCount(name) { return ALBUMS.filter(a => artistMatch(a, name)).length; }
+function renderLivePage() {
+  const box = document.getElementById('live-page');
+  const q = currentSearch.toLowerCase();
+  const all = liveArtists();
+  const countries = new Map();
+  all.forEach(a => new Set(a.concerts.map(c => c.country).filter(Boolean)).forEach(k => countries.set(k, (countries.get(k) || 0) + 1)));
+  if (liveCountry && !countries.has(liveCountry)) liveCountry = '';
+  const list = all.filter(a => (!liveCountry || a.concerts.some(c => c.country === liveCountry)) && (!q || a.name.toLowerCase().includes(q)));
+  const opts = `<option value="">${esc(t('allCountries'))}</option>` +
+    [...countries].sort((a, b) => a[0].localeCompare(b[0])).map(([k, n]) =>
+      `<option value="${esc(k)}"${k === liveCountry ? ' selected' : ''}>${esc(k)} (${n})</option>`).join('');
+  box.innerHTML = `<div class="live-tools"><select onchange="setLiveCountry(this.value)">${opts}</select>` +
+    `<span class="live-n">${esc(t('nArtists', { n: list.length }))}</span></div><div id="live-grid">` +
+    list.map(a => {
+      const sel = liveCountry ? a.concerts.filter(c => c.country === liveCountry) : a.concerts;
+      const c = sel[0], r = ARTISTS[a.name], dn = discoCount(a.name);
+      const ph = r && r.photo_url ? `<img src="${esc(r.photo_url)}" alt="" loading="lazy">` : esc(a.name.charAt(0));
+      const nm = esc(a.name).replace(/'/g, '&#39;');
+      return `<div class="live-card" onclick="filterByArtist('${nm}')">` +
+        `<div class="live-photo">${ph}</div><div class="live-info"><div class="live-name">${esc(a.name)}</div>` +
+        `<div class="live-next">${esc(t('nextLabel'))}${esc(fmtConcertDate(c.date))}, ${esc(concertPlace(c))}</div>` +
+        `<div class="live-meta">${esc(t('nConcerts', { n: sel.length }))}</div>` +
+        (dn ? `<button class="live-disco" onclick="event.stopPropagation();filterByArtist('${nm}')">${esc(t('discography', { n: dn }))}</button>` : '') +
+        `</div></div>`;
+    }).join('') + '</div>';
 }
 
 function personLive(name) {
@@ -887,7 +960,7 @@ function updateCounts() {
     ns:   ALBUMS.filter(a => seriesMatch(a, 'ns')).length,
     works:    ALBUMS.filter(a => compKind(a) === 'works').length,
     selected: ALBUMS.filter(a => compKind(a) === 'selected').length,
-    live: ALBUMS.filter(a => albumLive(a).lead.length).length,
+    live: liveArtists().length,
   };
   const withCover = ALBUMS.filter(a => a.cover_url).length;
 
