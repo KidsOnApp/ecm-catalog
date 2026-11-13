@@ -1031,6 +1031,9 @@ function sortFiltered() {
 // ═══════════════════════════════════════════════════════════
 //  RENDER GRID
 // ═══════════════════════════════════════════════════════════
+// Copertine già caricate: al ridisegno della griglia restano visibili (niente lampeggio nero)
+const LOADED_COVERS = new Set();
+
 function renderGrid() {
   const owned    = getOwned();
   const wishlist = getWishlist();
@@ -1050,7 +1053,7 @@ function renderGrid() {
     const ind = isOwned ? '<span class="ind ind-owned"></span>'
                : isWish ? '<span class="ind ind-wish"></span>' : '';
     const cover = a.cover_url
-      ? `<img src="${a.cover_url}" loading="lazy" alt="" onload="this.classList.add('loaded')">`
+      ? `<img src="${a.cover_url}"${LOADED_COVERS.has(a.cover_url) ? ' class="loaded"' : ''} loading="lazy" alt="" onload="LOADED_COVERS.add(this.getAttribute('src'));this.classList.add('loaded')">`
       : '';
     const lv = albumLive(a);
     const liveMark = lv.lead.length
