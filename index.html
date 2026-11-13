@@ -2,7 +2,14 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Nordicgrund">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Nordicgrund · catalogo discografico</title>
 <style>
 :root {
@@ -219,6 +226,57 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 @keyframes spin{to{transform:rotate(360deg)}}
 #loading-msg{font-size:12px;color:var(--text3)}
 
+/* ── TELEFONO ── */
+#menu-btn,#scan-btn{display:none;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text);border-radius:6px;width:36px;height:34px;cursor:pointer;flex:none;padding:0}
+#scan-btn{display:inline-flex}
+#scan-btn svg,#menu-btn svg{width:18px;height:18px}
+#menu-scrim{display:none}
+@media (max-width:720px){
+  body{height:100vh;height:100dvh}
+  #menu-btn{display:inline-flex}
+  #sidebar{position:fixed;top:0;left:0;bottom:0;z-index:150;transform:translateX(-100%);transition:transform .2s;
+    box-shadow:none;padding-top:env(safe-area-inset-top)}
+  body.menu-open #sidebar{transform:none;box-shadow:4px 0 24px rgba(0,0,0,.6)}
+  body.menu-open #menu-scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:140}
+  #topbar{padding:8px 10px;padding-top:calc(8px + env(safe-area-inset-top))}
+  #results-info{display:none}
+  #filter-bar{padding:6px 10px}
+  #content{padding:10px}
+  #album-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+  #detail-overlay{padding:0}
+  #detail-panel{max-height:100vh;max-height:100dvh;height:100%;border-radius:0;max-width:none}
+  #detail-top{flex-direction:column;padding:14px}
+  #detail-cover{width:60%;min-width:0;margin:0 auto}
+  #live-page{padding:10px}
+  #live-grid{grid-template-columns:1fr}
+}
+/* ── SCANSIONE ── */
+#scan-overlay{position:fixed;inset:0;z-index:300;background:#000;display:none;flex-direction:column;overflow-y:auto;
+  padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+#scan-overlay.open{display:flex}
+#scan-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;color:var(--text);font-size:14px;font-weight:600}
+#scan-close{background:none;border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer}
+#scan-reader{width:100%;max-width:520px;margin:0 auto;min-height:0}
+#scan-reader video{border-radius:8px}
+#scan-hint{color:var(--text3);font-size:12px;text-align:center;padding:8px 14px}
+#scan-manual{display:flex;gap:6px;padding:6px 14px;max-width:520px;width:100%;margin:0 auto}
+#scan-manual input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:8px;font-size:16px}
+#scan-manual button,.scan-btn2{background:var(--bg3);border:1px solid var(--border2);color:var(--accent);border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer}
+#scan-result{padding:12px 14px 24px;max-width:520px;width:100%;margin:0 auto;color:var(--text)}
+.sr-card{display:flex;gap:12px}
+.sr-cover{width:110px;height:110px;flex:none;background:var(--bg3);border-radius:4px;overflow:hidden}
+.sr-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.sr-title{font-size:17px;font-weight:600;line-height:1.2}
+.sr-sub{color:var(--text2);font-size:13px;margin-top:3px}
+.sr-cat{color:var(--text3);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+.sr-status{margin:12px 0 8px;font-size:14px;font-weight:600}
+.sr-status.on{color:#4caf50}.sr-status.wish{color:var(--accent)}
+.sr-actions{display:flex;gap:8px;flex-wrap:wrap}
+.sr-line{margin-top:10px;font-size:13px;color:var(--text2);line-height:1.5}
+.sr-line b{color:var(--text)}
+.sr-links{margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;font-size:12px}
+.sr-links a{color:var(--accent)}
 /* ── ACCOUNT ── */
 #account{padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.5}
 #account input{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:5px 7px;font-size:11px;margin:5px 0}
@@ -332,8 +390,10 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 <!-- MAIN -->
 <div id="main">
   <div id="topbar">
+    <button id="menu-btn" onclick="toggleMenu()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <input id="search" type="search" placeholder="Search" data-i18n-ph="search" oninput="onSearch(this.value)">
     <span id="results-info"></span>
+    <button id="scan-btn" onclick="openScan()" aria-label="Scan" data-i18n-title="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10"/></svg></button>
   </div>
   <div id="filter-bar">
     <button class="filter-btn" id="fb-decade" onclick="toggleDecade()">Decade ▾</button>
@@ -404,6 +464,14 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
   </div>
 </div>
 
+<div id="menu-scrim" onclick="toggleMenu()"></div>
+<div id="scan-overlay">
+  <div id="scan-head"><span data-i18n="scanTitle">Scan barcode</span><button id="scan-close" onclick="closeScan()" data-i18n="scanClose">Close</button></div>
+  <div id="scan-reader"></div>
+  <div id="scan-hint" data-i18n="scanHint"></div>
+  <form id="scan-manual" onsubmit="scanManual(event)"><input id="scan-code" inputmode="numeric" pattern="[0-9 ]*" data-i18n-ph="scanPh"><button type="submit" data-i18n="scanGo">Search</button></form>
+  <div id="scan-result"></div>
+</div>
 <div id="lightbox" onclick="closeLightbox()"><span class="lb-x">×</span><img id="lb-img" alt=""><div class="lb-cap" id="lb-cap"></div></div>
 <script src="concerts_match.js"></script>
 <script>
@@ -431,6 +499,7 @@ const I18N = {
     liveOne:'{n} concert scheduled · next {date}, {place}', liveMany:'{n} concerts scheduled · next {date}, {place}',
     statAlbums:'{n} albums in the catalog', statCovers:'{n} covers available', statOwned:'{o} owned · {w} wishlist',
     statConcerts:'{n} concerts scheduled ({link})', ecmSource:'ECM source', resAlbums:'{n} albums', locale:'en-GB',
+    scan:'Scan barcode', scanTitle:'Scan barcode', scanClose:'Close', scanHint:'Point the camera at the barcode on the back of the cover.', scanPh:'or type the code', scanGo:'Search', scanCamErr:'Camera not available. Type the code instead.', scanNotFound:'Not found in the catalog.', scanOwned:'In your collection', scanWish:'In your wishlist', scanNone:'Not in your collection', scanAddOwned:'Add to collection', scanAddWish:'Add to wishlist', scanTaste:'Taste match (estimate)', scanShared:'shared musicians with your albums', scanNoShared:'No overlap with your collection yet', scanRating:'MusicBrainz rating', scanVotes:'votes', scanNoRating:'No rating available', scanReopen:'Open the camera again', scanDiscogs:'Search on Discogs', scanCode:'Barcode: ', menuLbl:'Menu',
     signIn:'Sign in to sync', emailPh:'your email', sendLink:'Send link', linkSent:'Check your email for the sign-in link.', syncedAs:'Synced as', signOut:'Sign out', syncErr:'Sync error',
     allCountries:'All countries', nArtists:'{n} artists', nConcerts:'Concerts: {n}', discography:'Discography ({n})', nextLabel:'Next: ',
     bioFrom:'Biography from {link}, licensed CC BY-SA.', photoCredit:'Photo: {credit}, {license}, via {link}.', bioToggle:'Click the text to expand or collapse'
@@ -449,6 +518,7 @@ const I18N = {
     liveOne:'{n} concerto in programma · prossimo {date}, {place}', liveMany:'{n} concerti in programma · prossimo {date}, {place}',
     statAlbums:'{n} album nel catalogo', statCovers:'{n} copertine disponibili', statOwned:'{o} posseduti · {w} wishlist',
     statConcerts:'{n} concerti in programma ({link})', ecmSource:'fonte ECM', resAlbums:'{n} album', locale:'it-IT',
+    scan:'Scansiona il codice', scanTitle:'Scansiona il codice', scanClose:'Chiudi', scanHint:'Inquadra il codice a barre sul retro della copertina.', scanPh:'oppure scrivi il codice', scanGo:'Cerca', scanCamErr:'Fotocamera non disponibile. Scrivi il codice.', scanNotFound:'Non trovato nel catalogo.', scanOwned:'È nella tua collezione', scanWish:'È nella tua wishlist', scanNone:'Non è nella tua collezione', scanAddOwned:'Aggiungi alla collezione', scanAddWish:'Aggiungi alla wishlist', scanTaste:'Affinità coi tuoi gusti (stima)', scanShared:'musicisti in comune con i tuoi dischi', scanNoShared:'Nessun musicista in comune con la tua collezione', scanRating:'Voto MusicBrainz', scanVotes:'voti', scanNoRating:'Voto non disponibile', scanReopen:'Riapri la fotocamera', scanDiscogs:'Cerca su Discogs', scanCode:'Codice: ', menuLbl:'Menu',
     signIn:'Accedi per sincronizzare', emailPh:'la tua email', sendLink:'Invia link', linkSent:'Controlla la email: ti ho inviato il link di accesso.', syncedAs:'Sincronizzato come', signOut:'Esci', syncErr:'Errore di sincronizzazione',
     allCountries:'Tutti i paesi', nArtists:'{n} artisti', nConcerts:'Concerti: {n}', discography:'Discografia ({n})', nextLabel:'Prossimo: ',
     bioFrom:'Biografia da {link}, licenza CC BY-SA.', photoCredit:'Foto: {credit}, {license}, tramite {link}.', bioToggle:'Clic sul testo per espandere o ridurre'
@@ -467,6 +537,7 @@ const I18N = {
     liveOne:'{n} concert prévu · prochain {date}, {place}', liveMany:'{n} concerts prévus · prochain {date}, {place}',
     statAlbums:'{n} albums au catalogue', statCovers:'{n} pochettes disponibles', statOwned:'{o} possédés · {w} souhaits',
     statConcerts:'{n} concerts prévus ({link})', ecmSource:'source ECM', resAlbums:'{n} albums', locale:'fr-FR',
+    scan:'Scanner le code', scanTitle:'Scanner le code', scanClose:'Fermer', scanHint:'Visez le code-barres au dos de la pochette.', scanPh:'ou saisissez le code', scanGo:'Chercher', scanCamErr:'Caméra indisponible. Saisissez le code.', scanNotFound:'Introuvable dans le catalogue.', scanOwned:'Dans votre collection', scanWish:'Dans votre wishlist', scanNone:'Pas dans votre collection', scanAddOwned:'Ajouter à la collection', scanAddWish:'Ajouter à la wishlist', scanTaste:'Affinité avec vos goûts (estimation)', scanShared:'musiciens en commun avec vos disques', scanNoShared:'Aucun musicien en commun avec votre collection', scanRating:'Note MusicBrainz', scanVotes:'votes', scanNoRating:'Note indisponible', scanReopen:'Rouvrir la caméra', scanDiscogs:'Chercher sur Discogs', scanCode:'Code : ', menuLbl:'Menu',
     signIn:'Se connecter pour synchroniser', emailPh:'votre e-mail', sendLink:'Envoyer le lien', linkSent:'Vérifiez votre e-mail : le lien de connexion est envoyé.', syncedAs:'Synchronisé en tant que', signOut:'Se déconnecter', syncErr:'Erreur de synchronisation',
     allCountries:'Tous les pays', nArtists:'{n} artistes', nConcerts:'Concerts: {n}', discography:'Discographie ({n})', nextLabel:'Prochain : ',
     bioFrom:'Biographie issue de {link}, licence CC BY-SA.', photoCredit:'Photo : {credit}, {license}, via {link}.', bioToggle:'Cliquez sur le texte pour développer ou réduire'
@@ -485,6 +556,7 @@ const I18N = {
     liveOne:'{n} Konzert geplant · nächstes {date}, {place}', liveMany:'{n} Konzerte geplant · nächstes {date}, {place}',
     statAlbums:'{n} Alben im Katalog', statCovers:'{n} Cover verfügbar', statOwned:'{o} im Besitz · {w} Wunschliste',
     statConcerts:'{n} Konzerte geplant ({link})', ecmSource:'ECM-Quelle', resAlbums:'{n} Alben', locale:'de-DE',
+    scan:'Barcode scannen', scanTitle:'Barcode scannen', scanClose:'Schließen', scanHint:'Richten Sie die Kamera auf den Barcode auf der Rückseite.', scanPh:'oder Code eingeben', scanGo:'Suchen', scanCamErr:'Kamera nicht verfügbar. Code eingeben.', scanNotFound:'Nicht im Katalog gefunden.', scanOwned:'In Ihrer Sammlung', scanWish:'In Ihrer Wunschliste', scanNone:'Nicht in Ihrer Sammlung', scanAddOwned:'Zur Sammlung hinzufügen', scanAddWish:'Zur Wunschliste hinzufügen', scanTaste:'Geschmacks-Übereinstimmung (Schätzung)', scanShared:'gemeinsame Musiker mit Ihren Alben', scanNoShared:'Keine Überschneidung mit Ihrer Sammlung', scanRating:'MusicBrainz-Bewertung', scanVotes:'Stimmen', scanNoRating:'Keine Bewertung verfügbar', scanReopen:'Kamera erneut öffnen', scanDiscogs:'Auf Discogs suchen', scanCode:'Code: ', menuLbl:'Menü',
     signIn:'Anmelden zum Synchronisieren', emailPh:'Ihre E-Mail', sendLink:'Link senden', linkSent:'Prüfen Sie Ihre E-Mail: Der Anmeldelink wurde gesendet.', syncedAs:'Synchronisiert als', signOut:'Abmelden', syncErr:'Synchronisierungsfehler',
     allCountries:'Alle Länder', nArtists:'{n} Künstler', nConcerts:'Konzerte: {n}', discography:'Diskografie ({n})', nextLabel:'Nächstes: ',
     bioFrom:'Biografie von {link}, Lizenz CC BY-SA.', photoCredit:'Foto: {credit}, {license}, über {link}.', bioToggle:'Text anklicken zum Ein- oder Ausklappen'
@@ -503,6 +575,7 @@ const I18N = {
     liveOne:'{n} concierto programado · próximo {date}, {place}', liveMany:'{n} conciertos programados · próximo {date}, {place}',
     statAlbums:'{n} álbumes en el catálogo', statCovers:'{n} portadas disponibles', statOwned:'{o} en colección · {w} deseos',
     statConcerts:'{n} conciertos programados ({link})', ecmSource:'fuente ECM', resAlbums:'{n} álbumes', locale:'es-ES',
+    scan:'Escanear código', scanTitle:'Escanear código', scanClose:'Cerrar', scanHint:'Apunta la cámara al código de barras de la contraportada.', scanPh:'o escribe el código', scanGo:'Buscar', scanCamErr:'Cámara no disponible. Escribe el código.', scanNotFound:'No encontrado en el catálogo.', scanOwned:'En tu colección', scanWish:'En tu lista de deseos', scanNone:'No está en tu colección', scanAddOwned:'Añadir a la colección', scanAddWish:'Añadir a deseos', scanTaste:'Afinidad con tus gustos (estimación)', scanShared:'músicos en común con tus discos', scanNoShared:'Ningún músico en común con tu colección', scanRating:'Valoración MusicBrainz', scanVotes:'votos', scanNoRating:'Valoración no disponible', scanReopen:'Reabrir la cámara', scanDiscogs:'Buscar en Discogs', scanCode:'Código: ', menuLbl:'Menú',
     signIn:'Inicia sesión para sincronizar', emailPh:'tu correo', sendLink:'Enviar enlace', linkSent:'Revisa tu correo: te enviamos el enlace de acceso.', syncedAs:'Sincronizado como', signOut:'Cerrar sesión', syncErr:'Error de sincronización',
     allCountries:'Todos los países', nArtists:'{n} artistas', nConcerts:'Conciertos: {n}', discography:'Discografía ({n})', nextLabel:'Próximo: ',
     bioFrom:'Biografía de {link}, licencia CC BY-SA.', photoCredit:'Foto: {credit}, {license}, vía {link}.', bioToggle:'Haz clic en el texto para ampliar o reducir'
@@ -541,6 +614,7 @@ function applyStaticI18n() {
   document.title = t('titleTag');
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); el.setAttribute('aria-label', t(el.dataset.i18nTitle)); });
   const dec = document.getElementById('fb-decade'); if (dec) dec.textContent = t('decade') + ' ▾';
   const bw = document.getElementById('btn-wish'); if (bw) bw.textContent = '♡ ' + t('wishlist');
   const sn = document.getElementById('source-note-album'); if (sn) sn.innerHTML = sourceNoteHtml();
@@ -737,7 +811,7 @@ async function loadAlbums() {
   while (true) {
     msg.textContent = t('loadingN', { n: all.length });
     const batch = await sbGet(
-      `/rest/v1/albums?select=id,catalog,year,artist,artist_list,title,notes,series,musicians,musician_list,cover_url,cover_ok,mbid,rg_mbid`
+      `/rest/v1/albums?select=id,catalog,year,artist,artist_list,title,notes,series,musicians,musician_list,cover_url,cover_ok,mbid,rg_mbid,ean,dist_catno`
       + `&order=catalog&limit=${PAGE}&offset=${offset}`
     );
     if (!Array.isArray(batch) || batch.length === 0) break;
@@ -761,6 +835,8 @@ async function loadAlbums() {
     cover_ok:     r.cover_ok || false,
     mbid:         r.mbid || null,
     rg_mbid:      r.rg_mbid || null,
+    ean:          r.ean || [],
+    distCatno:    r.dist_catno || [],
   }));
 }
 
@@ -953,6 +1029,134 @@ function renderLivePage() {
         (dn ? `<button class="live-disco" onclick="event.stopPropagation();filterByArtist('${nm}')">${esc(t('discography', { n: dn }))}</button>` : '') +
         `</div></div>`;
     }).join('') + '</div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TELEFONO: menu e scansione del codice a barre
+// ═══════════════════════════════════════════════════════════
+function toggleMenu() { document.body.classList.toggle('menu-open'); }
+document.getElementById('nav').addEventListener('click', e => { if (e.target.closest('.nav-btn')) document.body.classList.remove('menu-open'); });
+
+let scanner = null, scanLibPromise = null, lastScanAlbum = null;
+function loadScanLib() {
+  if (window.Html5Qrcode) return Promise.resolve();
+  if (!scanLibPromise) scanLibPromise = new Promise((res, rej) => {
+    const el = document.createElement('script');
+    el.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+    el.onload = res; el.onerror = () => { scanLibPromise = null; rej(new Error('lib')); };
+    document.head.appendChild(el);
+  });
+  return scanLibPromise;
+}
+function openScan() {
+  document.getElementById('scan-overlay').classList.add('open');
+  document.getElementById('scan-result').innerHTML = '';
+  document.getElementById('scan-hint').textContent = t('scanHint');
+  startScan();
+}
+async function startScan() {
+  try {
+    await loadScanLib();
+    const F = Html5QrcodeSupportedFormats;
+    scanner = new Html5Qrcode('scan-reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], verbose: false });
+    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 280, height: 140 } },
+      txt => { stopScan(); handleCode(txt); }, () => {});
+  } catch (e) {
+    document.getElementById('scan-hint').textContent = t('scanCamErr');
+  }
+}
+async function stopScan() {
+  const sc = scanner; scanner = null;
+  if (sc) { try { await sc.stop(); sc.clear(); } catch (e) {} }
+}
+function closeScan() { stopScan(); document.getElementById('scan-overlay').classList.remove('open'); }
+function scanManual(ev) {
+  ev.preventDefault();
+  const c = document.getElementById('scan-code').value;
+  if (c.replace(/\D/g, '').length >= 8) { stopScan(); handleCode(c); }
+}
+
+// EAN a 13 cifre (gli UPC a 12 cifre prendono lo zero iniziale)
+function normEan(c) { c = String(c || '').replace(/\D/g, ''); return c.length === 12 ? '0' + c : c; }
+// Codici PolyGram: prefisso 73145 / 04228 + ultime 5 cifre del numero di distribuzione + "2" + controllo
+function distFive(e13) {
+  const u = e13.slice(1);
+  return (u.length === 12 && (u.slice(0, 5) === '73145' || u.slice(0, 5) === '04228') && u[10] === '2') ? u.slice(5, 10) : null;
+}
+function findByEan(code) {
+  const e = normEan(code);
+  let a = ALBUMS.find(x => (x.ean || []).includes(e));
+  if (a) return a;
+  const five = distFive(e);
+  if (five) a = ALBUMS.find(x => (x.distCatno || []).some(d => d.replace(/\D/g, '').slice(1, 6) === five));
+  return a || null;
+}
+// Affinità: quanti musicisti del disco compaiono nei dischi che possiedi o hai in wishlist
+function tasteFor(a) {
+  const owned = getOwned(), wish = getWishlist();
+  const cnt = new Map();
+  ALBUMS.forEach(x => {
+    if (x.id === a.id || !(owned[x.id] || wish[x.id])) return;
+    const w = owned[x.id] ? 1 : 0.5;
+    people(x).forEach(n => cnt.set(n, (cnt.get(n) || 0) + w));
+  });
+  const ps = [...people(a)];
+  const shared = ps.filter(n => cnt.has(n)).sort((x, y) => cnt.get(y) - cnt.get(x));
+  const score = ps.length ? Math.round(100 * shared.reduce((s, n) => s + Math.min(1, cnt.get(n) / 3), 0) / ps.length) : 0;
+  return { score, shared: shared.slice(0, 4), n: shared.length };
+}
+async function mbRating(a) {
+  if (!a.rg_mbid) return null;
+  try {
+    const r = await fetch('https://musicbrainz.org/ws/2/release-group/' + a.rg_mbid + '?inc=ratings&fmt=json');
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.rating && j.rating.value ? j.rating : null;
+  } catch (e) { return null; }
+}
+function scanToggle(kind) {
+  if (!lastScanAlbum) return;
+  quickToggle({ stopPropagation() {} }, lastScanAlbum.id, kind);
+  showScanAlbum(lastScanAlbum, true);
+}
+function scanStatusHtml(a) {
+  const o = getOwned()[a.id], w = getWishlist()[a.id];
+  return `<div class="sr-status ${o ? 'on' : w ? 'wish' : ''}">${esc(t(o ? 'scanOwned' : w ? 'scanWish' : 'scanNone'))}</div>` +
+    `<div class="sr-actions"><button class="scan-btn2" onclick="scanToggle('owned')">${esc(o ? '✓ ' : '+ ')}${esc(t('scanAddOwned'))}</button>` +
+    `<button class="scan-btn2" onclick="scanToggle('wish')">${esc(w ? '♡ ' : '+ ')}${esc(t('scanAddWish'))}</button></div>`;
+}
+function showScanAlbum(a, keepRating) {
+  lastScanAlbum = a;
+  const tf = tasteFor(a);
+  const box = document.getElementById('scan-result');
+  const prevR = keepRating ? (document.getElementById('sr-rating') || {}).innerHTML : '';
+  box.innerHTML =
+    `<div class="sr-card"><div class="sr-cover">${a.cover_url ? `<img src="${esc(a.cover_url)}" alt="">` : ''}</div>` +
+    `<div><div class="sr-title">${esc(a.title)}</div><div class="sr-sub">${esc(a.artist)} · ${esc(a.year)}</div>` +
+    `<div class="sr-cat">${esc(a.catalog)}</div></div></div>` +
+    scanStatusHtml(a) +
+    `<div class="sr-line"><b>${esc(t('scanTaste'))}: ${tf.score}%</b><br>` +
+    (tf.n ? esc(tf.n + ' ' + t('scanShared') + ': ' + tf.shared.join(', ')) : esc(t('scanNoShared'))) + `</div>` +
+    `<div class="sr-line" id="sr-rating">${prevR || ''}</div>` +
+    `<div class="sr-links"><a href="#" onclick="closeScan();openDetail('${esc(a.id)}');return false">${esc(a.catalog)} ›</a>` +
+    `<a href="https://www.discogs.com/search/?q=${encodeURIComponent(a.artist + ' ' + a.title)}&type=release" target="_blank" rel="noopener">${esc(t('scanDiscogs'))}</a>` +
+    (a.rg_mbid ? `<a href="https://musicbrainz.org/release-group/${esc(a.rg_mbid)}" target="_blank" rel="noopener">MusicBrainz</a>` : '') + `</div>` +
+    `<div class="sr-actions" style="margin-top:14px"><button class="scan-btn2" onclick="openScan()">${esc(t('scanReopen'))}</button></div>`;
+  if (!keepRating) mbRating(a).then(r => {
+    const el = document.getElementById('sr-rating');
+    if (el && lastScanAlbum === a) el.innerHTML = r
+      ? `<b>${esc(t('scanRating'))}: ${(+r.value).toFixed(1)}/5</b> (${r['votes-count']} ${esc(t('scanVotes'))})`
+      : esc(t('scanNoRating'));
+  });
+}
+function handleCode(code) {
+  const a = findByEan(code);
+  if (a) { showScanAlbum(a); return; }
+  lastScanAlbum = null;
+  document.getElementById('scan-result').innerHTML =
+    `<div class="sr-status">${esc(t('scanNotFound'))}</div><div class="sr-sub">${esc(t('scanCode'))}${esc(normEan(code))}</div>` +
+    `<div class="sr-links"><a href="https://www.discogs.com/search/?q=${encodeURIComponent(normEan(code))}&type=release" target="_blank" rel="noopener">${esc(t('scanDiscogs'))}</a></div>` +
+    `<div class="sr-actions" style="margin-top:14px"><button class="scan-btn2" onclick="openScan()">${esc(t('scanReopen'))}</button></div>`;
 }
 
 function personLive(name) {
