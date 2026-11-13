@@ -105,26 +105,36 @@ def ean_to_dist(ean):
     return None
 
 
-def fetch_releases():
-    rel, off, total, fails = [], 0, None, 0
-    q = urllib.parse.quote('label:"ECM Records" OR label:"ECM"')
-    while total is None or off < total:
-        d = get(f'https://musicbrainz.org/ws/2/release/?query={q}&fmt=json&limit=100&offset={off}', retries=6)
+def fetch_query(extra, rel, seen):
+    """Scarica tutte le pagine di una ricerca (MusicBrainz non permette offset oltre 500)."""
+    base = 'label:"ECM Records"' + (' AND ' + extra if extra else '')
+    q = urllib.parse.quote(base)
+    off, total = 0, None
+    while total is None or off < min(total, 500):
+        d = get(f'https://musicbrainz.org/ws/2/release/?query={q}&fmt=json&limit=100&offset={off}', retries=3)
         time.sleep(1.2)
-        if not d or not d.get('releases'):
-            fails += 1
-            print(f'  pagina a offset {off} non ricevuta (tentativo {fails})')
-            if fails >= 5:
-                off += 100  # salta la pagina e va avanti
-                fails = 0
-            else:
-                time.sleep(15)
-            continue
-        fails = 0
-        total = d.get('count') or total or 0
-        rel += d['releases']
+        if not d:
+            print(f'  [!] errore su {extra or "tutto"} offset {off}: salto')
+            return total
+        total = d.get('count', 0)
+        for r in d.get('releases') or []:
+            if r['id'] not in seen:
+                seen.add(r['id']); rel.append(r)
         off += 100
-        print(f'  scaricate {len(rel)} / {total}')
+    return total
+
+
+def fetch_releases():
+    rel, seen = [], set()
+    buckets = [f'date:[{y} TO {y}]' for y in range(1968, 2028)] + ['NOT date:*']
+    for b in buckets:
+        total = fetch_query(b, rel, seen)
+        if total and total > 500:      # troppe: divide per formato
+            for sub in ('format:CD', 'format:Vinyl', 'NOT format:CD AND NOT format:Vinyl'):
+                t2 = fetch_query(b + ' AND ' + sub, rel, seen)
+                if t2 and t2 > 500:
+                    print(f'  [!] {b} / {sub}: {t2} release, ne leggo solo 500')
+        print(f'  {b}: {total} -> totale scaricate {len(rel)}', flush=True)
     return rel
 
 
@@ -159,6 +169,7 @@ def main():
             break
         off += 1000
     by_cat = {norm_cat(r['catalog']): r for r in albums}
+    sys.stdout.reconfigure(line_buffering=True)
     print(f'{len(albums)} album nel catalogo. Modalita: {"APPLICA" if a.apply else "SIMULAZIONE"}\n')
 
     print('Scarico le release da MusicBrainz...')
