@@ -1,0 +1,29 @@
+name: Update EAN Codes
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Applica (se spento: solo simulazione)'
+        type: boolean
+        default: false
+
+jobs:
+  eans:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Raccogli gli EAN
+        run: |
+          if [ "${{ inputs.apply }}" = "true" ]; then
+            python update_eans.py --apply
+          else
+            python update_eans.py
+          fi
