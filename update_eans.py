@@ -106,19 +106,37 @@ def ean_to_dist(ean):
 
 
 def fetch_releases():
-    rel, off = [], 0
+    rel, off, total, fails = [], 0, None, 0
     q = urllib.parse.quote('label:"ECM Records" OR label:"ECM"')
-    while True:
-        d = get(f'https://musicbrainz.org/ws/2/release/?query={q}&fmt=json&limit=100&offset={off}')
-        time.sleep(1.1)
+    while total is None or off < total:
+        d = get(f'https://musicbrainz.org/ws/2/release/?query={q}&fmt=json&limit=100&offset={off}', retries=6)
+        time.sleep(1.2)
         if not d or not d.get('releases'):
-            break
+            fails += 1
+            print(f'  pagina a offset {off} non ricevuta (tentativo {fails})')
+            if fails >= 5:
+                off += 100  # salta la pagina e va avanti
+                fails = 0
+            else:
+                time.sleep(15)
+            continue
+        fails = 0
+        total = d.get('count') or total or 0
         rel += d['releases']
         off += 100
-        print(f'  scaricate {len(rel)} / {d.get("count")}')
-        if off >= (d.get('count') or 0):
-            break
+        print(f'  scaricate {len(rel)} / {total}')
     return rel
+
+
+def variants(catalog):
+    c = norm_cat(catalog)
+    out = [c]
+    c2 = re.sub(r'\s+(ST|ST\.|LP|CD)$', '', c)
+    out.append(c2)
+    m = re.match(r'^((?:ECM|RARUM|JAPO)\s*\d+)/\d+$', c2, re.I)
+    if m:
+        out.append(m.group(1))
+    return out
 
 
 def main():
@@ -176,31 +194,39 @@ def main():
             for dk in dist:
                 dcat[k].add(f'{dk[:3]} {dk[3:6]}-{dk[6]}')
 
-    have = [c for c in by_cat if ean.get(c)]
+    def look(m, c):
+        for v in variants(c):
+            v2 = ecm_from_catno(v) or v
+            for k in (v, v2, v2.upper()):
+                if m.get(k):
+                    return m[k]
+        return None
+
+    have = [c for c in by_cat if look(ean, c)]
     print(f'\nRelease lette: {len(rels)} (barcode non validi scartati: {bad})')
     print(f'Album con almeno un EAN: {len(have)} / {len(by_cat)}')
-    print(f'Album con numero di distribuzione: {len([c for c in by_cat if dcat.get(c)])}')
+    print(f'Album con numero di distribuzione: {len([c for c in by_cat if look(dcat, c)])}')
     print(f'Numeri di distribuzione noti: {len(d2e)}')
 
     # 3) prova del decodificatore: EAN -> cinque cifre -> numero di distribuzione noto -> album giusto?
     ok = tot = 0
     for c in have:
-        known = {dk[1:6] for dk in {x.replace(' ', '').replace('-', '') for x in dcat.get(c, ())}}
-        for e in ean[c]:
+        known = {dk[1:6] for dk in {x.replace(' ', '').replace('-', '') for x in (look(dcat, c) or ())}}
+        for e in look(ean, c):
             f = ean_to_dist(e)
             if f is not None and known:
                 tot += 1
                 ok += 1 if f in known else 0
     print(f'Decodificatore EAN -> numero di distribuzione: {ok}/{tot} coincidono con MusicBrainz')
 
-    missing = sorted(c for c in by_cat if not ean.get(c))
+    missing = sorted(c for c in by_cat if not look(ean, c))
     print(f'\nAlbum senza EAN ({len(missing)}), primi 40: {missing[:40]}')
 
     if a.apply:
         n = 0
         for c in have:
             row = by_cat[c]
-            body = {'ean': sorted(ean[c]), 'dist_catno': sorted(dcat.get(c, []))}
+            body = {'ean': sorted(look(ean, c)), 'dist_catno': sorted(look(dcat, c) or [])}
             r = sb('PATCH', '/rest/v1/albums?id=eq.' + urllib.parse.quote(str(row['id'])), body,
                    {'Prefer': 'return=minimal'})
             if r is None:
