@@ -219,6 +219,12 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 @keyframes spin{to{transform:rotate(360deg)}}
 #loading-msg{font-size:12px;color:var(--text3)}
 
+/* ── ACCOUNT ── */
+#account{padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.5}
+#account input{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:5px 7px;font-size:11px;margin:5px 0}
+#account button{background:none;border:1px solid var(--border2);color:var(--accent);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer}
+#account button:hover{border-color:var(--accent)}
+#account .acc-mail{color:var(--text2);word-break:break-all}
 /* ── PAGINA ARTISTI IN CONCERTO ── */
 #live-page{display:none;padding:16px;overflow-y:auto;flex:1}
 #live-page.open{display:block}
@@ -319,6 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
       <span data-i18n="artistsLive">Artisti in concerto</span> <span class="nav-count" id="cnt-live">0</span>
     </button>
   </div>
+  <div id="account"></div>
   <div id="db-stats"></div>
 </nav>
 
@@ -424,6 +431,7 @@ const I18N = {
     liveOne:'{n} concert scheduled · next {date}, {place}', liveMany:'{n} concerts scheduled · next {date}, {place}',
     statAlbums:'{n} albums in the catalog', statCovers:'{n} covers available', statOwned:'{o} owned · {w} wishlist',
     statConcerts:'{n} concerts scheduled ({link})', ecmSource:'ECM source', resAlbums:'{n} albums', locale:'en-GB',
+    signIn:'Sign in to sync', emailPh:'your email', sendLink:'Send link', linkSent:'Check your email for the sign-in link.', syncedAs:'Synced as', signOut:'Sign out', syncErr:'Sync error',
     allCountries:'All countries', nArtists:'{n} artists', nConcerts:'Concerts: {n}', discography:'Discography ({n})', nextLabel:'Next: ',
     bioFrom:'Biography from {link}, licensed CC BY-SA.', photoCredit:'Photo: {credit}, {license}, via {link}.', bioToggle:'Click the text to expand or collapse'
   },
@@ -441,6 +449,7 @@ const I18N = {
     liveOne:'{n} concerto in programma · prossimo {date}, {place}', liveMany:'{n} concerti in programma · prossimo {date}, {place}',
     statAlbums:'{n} album nel catalogo', statCovers:'{n} copertine disponibili', statOwned:'{o} posseduti · {w} wishlist',
     statConcerts:'{n} concerti in programma ({link})', ecmSource:'fonte ECM', resAlbums:'{n} album', locale:'it-IT',
+    signIn:'Accedi per sincronizzare', emailPh:'la tua email', sendLink:'Invia link', linkSent:'Controlla la email: ti ho inviato il link di accesso.', syncedAs:'Sincronizzato come', signOut:'Esci', syncErr:'Errore di sincronizzazione',
     allCountries:'Tutti i paesi', nArtists:'{n} artisti', nConcerts:'Concerti: {n}', discography:'Discografia ({n})', nextLabel:'Prossimo: ',
     bioFrom:'Biografia da {link}, licenza CC BY-SA.', photoCredit:'Foto: {credit}, {license}, tramite {link}.', bioToggle:'Clic sul testo per espandere o ridurre'
   },
@@ -458,6 +467,7 @@ const I18N = {
     liveOne:'{n} concert prévu · prochain {date}, {place}', liveMany:'{n} concerts prévus · prochain {date}, {place}',
     statAlbums:'{n} albums au catalogue', statCovers:'{n} pochettes disponibles', statOwned:'{o} possédés · {w} souhaits',
     statConcerts:'{n} concerts prévus ({link})', ecmSource:'source ECM', resAlbums:'{n} albums', locale:'fr-FR',
+    signIn:'Se connecter pour synchroniser', emailPh:'votre e-mail', sendLink:'Envoyer le lien', linkSent:'Vérifiez votre e-mail : le lien de connexion est envoyé.', syncedAs:'Synchronisé en tant que', signOut:'Se déconnecter', syncErr:'Erreur de synchronisation',
     allCountries:'Tous les pays', nArtists:'{n} artistes', nConcerts:'Concerts: {n}', discography:'Discographie ({n})', nextLabel:'Prochain : ',
     bioFrom:'Biographie issue de {link}, licence CC BY-SA.', photoCredit:'Photo : {credit}, {license}, via {link}.', bioToggle:'Cliquez sur le texte pour développer ou réduire'
   },
@@ -475,6 +485,7 @@ const I18N = {
     liveOne:'{n} Konzert geplant · nächstes {date}, {place}', liveMany:'{n} Konzerte geplant · nächstes {date}, {place}',
     statAlbums:'{n} Alben im Katalog', statCovers:'{n} Cover verfügbar', statOwned:'{o} im Besitz · {w} Wunschliste',
     statConcerts:'{n} Konzerte geplant ({link})', ecmSource:'ECM-Quelle', resAlbums:'{n} Alben', locale:'de-DE',
+    signIn:'Anmelden zum Synchronisieren', emailPh:'Ihre E-Mail', sendLink:'Link senden', linkSent:'Prüfen Sie Ihre E-Mail: Der Anmeldelink wurde gesendet.', syncedAs:'Synchronisiert als', signOut:'Abmelden', syncErr:'Synchronisierungsfehler',
     allCountries:'Alle Länder', nArtists:'{n} Künstler', nConcerts:'Konzerte: {n}', discography:'Diskografie ({n})', nextLabel:'Nächstes: ',
     bioFrom:'Biografie von {link}, Lizenz CC BY-SA.', photoCredit:'Foto: {credit}, {license}, über {link}.', bioToggle:'Text anklicken zum Ein- oder Ausklappen'
   },
@@ -492,6 +503,7 @@ const I18N = {
     liveOne:'{n} concierto programado · próximo {date}, {place}', liveMany:'{n} conciertos programados · próximo {date}, {place}',
     statAlbums:'{n} álbumes en el catálogo', statCovers:'{n} portadas disponibles', statOwned:'{o} en colección · {w} deseos',
     statConcerts:'{n} conciertos programados ({link})', ecmSource:'fuente ECM', resAlbums:'{n} álbumes', locale:'es-ES',
+    signIn:'Inicia sesión para sincronizar', emailPh:'tu correo', sendLink:'Enviar enlace', linkSent:'Revisa tu correo: te enviamos el enlace de acceso.', syncedAs:'Sincronizado como', signOut:'Cerrar sesión', syncErr:'Error de sincronización',
     allCountries:'Todos los países', nArtists:'{n} artistas', nConcerts:'Conciertos: {n}', discography:'Discografía ({n})', nextLabel:'Próximo: ',
     bioFrom:'Biografía de {link}, licencia CC BY-SA.', photoCredit:'Foto: {credit}, {license}, vía {link}.', bioToggle:'Haz clic en el texto para ampliar o reducir'
   }
@@ -533,6 +545,7 @@ function applyStaticI18n() {
   const bw = document.getElementById('btn-wish'); if (bw) bw.textContent = '♡ ' + t('wishlist');
   const sn = document.getElementById('source-note-album'); if (sn) sn.innerHTML = sourceNoteHtml();
   buildLangSwitch();
+  if (typeof renderAccount === 'function') renderAccount();
 }
 
 function setLang(code) {
@@ -573,9 +586,137 @@ const LS_DATES    = 'ecm_dates_v2';
 function getOwned()    { try { return JSON.parse(localStorage.getItem(LS_OWNED)    || '{}'); } catch { return {}; } }
 function getWishlist() { try { return JSON.parse(localStorage.getItem(LS_WISHLIST) || '{}'); } catch { return {}; } }
 function getDates()    { try { return JSON.parse(localStorage.getItem(LS_DATES)    || '{}'); } catch { return {}; } }
-function saveOwned(o)    { localStorage.setItem(LS_OWNED,    JSON.stringify(o)); }
-function saveWishlist(w) { localStorage.setItem(LS_WISHLIST, JSON.stringify(w)); }
-function saveDates(d)    { localStorage.setItem(LS_DATES,    JSON.stringify(d)); }
+function saveOwned(o)    { localStorage.setItem(LS_OWNED,    JSON.stringify(o)); markDirty(); }
+function saveWishlist(w) { localStorage.setItem(LS_WISHLIST, JSON.stringify(w)); markDirty(); }
+function saveDates(d)    { localStorage.setItem(LS_DATES,    JSON.stringify(d)); markDirty(); }
+
+// ═══════════════════════════════════════════════════════════
+//  ACCOUNT E SINCRONIZZAZIONE (collezione, wishlist, date di acquisto)
+//  Accesso con link via email (Supabase Auth); i dati stanno nella tabella user_state
+//  e ognuno vede solo i propri (RLS). Senza accesso tutto resta nel browser.
+// ═══════════════════════════════════════════════════════════
+const LS_SESSION = 'ng_session', LS_SYNCED = 'ng_synced_at', LS_DIRTY = 'ng_dirty';
+let SESSION = null, pushTimer = null, syncMsg = '', mailSent = false;
+try { SESSION = JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); } catch (e) {}
+
+function saveSession(x) {
+  SESSION = x;
+  try { x ? localStorage.setItem(LS_SESSION, JSON.stringify(x)) : localStorage.removeItem(LS_SESSION); } catch (e) {}
+}
+function markDirty() {
+  try { localStorage.setItem(LS_DIRTY, '1'); } catch (e) {}
+  if (SESSION) { clearTimeout(pushTimer); pushTimer = setTimeout(pushState, 1500); }
+}
+function takeSessionFromUrl() {
+  const h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  if (!h.get('access_token')) return false;
+  saveSession({
+    access_token: h.get('access_token'), refresh_token: h.get('refresh_token'),
+    expires_at: Math.floor(Date.now() / 1000) + parseInt(h.get('expires_in') || '3600', 10)
+  });
+  history.replaceState(null, '', location.pathname + location.search);
+  return true;
+}
+async function authToken() {
+  if (!SESSION) return null;
+  if (SESSION.expires_at - 60 < Date.now() / 1000) {
+    const r = await fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST', headers: { apikey: SB_ANON, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: SESSION.refresh_token })
+    });
+    if (!r.ok) { saveSession(null); renderAccount(); return null; }
+    const j = await r.json();
+    saveSession({ ...SESSION, access_token: j.access_token, refresh_token: j.refresh_token,
+      expires_at: Math.floor(Date.now() / 1000) + (j.expires_in || 3600), email: SESSION.email, user_id: SESSION.user_id });
+  }
+  return SESSION.access_token;
+}
+async function authFetch(path, opts) {
+  const tok = await authToken();
+  if (!tok) throw new Error('no session');
+  const o = opts || {};
+  return fetch(SB_URL + path, { ...o, headers: { apikey: SB_ANON, Authorization: 'Bearer ' + tok,
+    'Content-Type': 'application/json', ...(o.headers || {}) } });
+}
+async function loadUser() {
+  const r = await authFetch('/auth/v1/user');
+  if (!r.ok) throw new Error('user ' + r.status);
+  const u = await r.json();
+  saveSession({ ...SESSION, email: u.email, user_id: u.id });
+}
+async function sendLink(email) {
+  const r = await fetch(SB_URL + '/auth/v1/otp?redirect_to=' + encodeURIComponent(location.origin + location.pathname), {
+    method: 'POST', headers: { apikey: SB_ANON, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, create_user: true })
+  });
+  if (!r.ok) throw new Error('otp ' + r.status);
+}
+function signOut() { saveSession(null); try { localStorage.removeItem(LS_SYNCED); } catch (e) {} syncMsg = ''; renderAccount(); }
+
+function submitSignIn(ev) {
+  ev.preventDefault();
+  const email = document.getElementById('acc-email').value.trim();
+  if (!email) return;
+  sendLink(email).then(() => { mailSent = true; syncMsg = ''; renderAccount(); })
+    .catch(() => { syncMsg = t('syncErr'); renderAccount(); });
+}
+function renderAccount() {
+  const box = document.getElementById('account');
+  if (!box) return;
+  if (SESSION && SESSION.email) {
+    box.innerHTML = `${esc(t('syncedAs'))}<br><span class="acc-mail">${esc(SESSION.email)}</span>` +
+      (syncMsg ? `<br>${esc(syncMsg)}` : '') + `<br><button onclick="signOut()" style="margin-top:6px">${esc(t('signOut'))}</button>`;
+  } else if (mailSent) {
+    box.innerHTML = esc(t('linkSent'));
+  } else {
+    box.innerHTML = `<form onsubmit="submitSignIn(event)">${esc(t('signIn'))}` +
+      `<input id="acc-email" type="email" required placeholder="${esc(t('emailPh'))}" autocomplete="email">` +
+      `<button type="submit">${esc(t('sendLink'))}</button></form>` + (syncMsg ? `<br>${esc(syncMsg)}` : '');
+  }
+}
+
+function mergeUnion(a, b) { return { ...(a || {}), ...(b || {}) }; }
+async function pushState() {
+  if (!SESSION || !SESSION.user_id) return;
+  const now = new Date().toISOString();
+  try {
+    const r = await authFetch('/rest/v1/user_state?on_conflict=user_id', {
+      method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ user_id: SESSION.user_id, owned: getOwned(), wishlist: getWishlist(), dates: getDates(), updated_at: now })
+    });
+    if (!r.ok) throw new Error('push ' + r.status);
+    localStorage.setItem(LS_SYNCED, now); localStorage.removeItem(LS_DIRTY);
+    syncMsg = ''; renderAccount();
+  } catch (e) { syncMsg = t('syncErr'); renderAccount(); }
+}
+async function pullState() {
+  if (!SESSION) return;
+  try {
+    if (!SESSION.user_id) await loadUser();
+    const r = await authFetch('/rest/v1/user_state?select=owned,wishlist,dates,updated_at&user_id=eq.' + SESSION.user_id);
+    if (!r.ok) throw new Error('pull ' + r.status);
+    const rows = await r.json();
+    const row = rows[0];
+    const synced = localStorage.getItem(LS_SYNCED), dirty = localStorage.getItem(LS_DIRTY);
+    if (!row) { await pushState(); renderAccount(); return; }
+    if (!synced) {                       // primo accesso su questo dispositivo: unisce
+      localStorage.setItem(LS_OWNED,    JSON.stringify(mergeUnion(row.owned, getOwned())));
+      localStorage.setItem(LS_WISHLIST, JSON.stringify(mergeUnion(row.wishlist, getWishlist())));
+      localStorage.setItem(LS_DATES,    JSON.stringify(mergeUnion(row.dates, getDates())));
+      await pushState();
+    } else if (dirty) {
+      await pushState();
+    } else if (row.updated_at > synced) { // un altro dispositivo ha modificato: prende il server
+      localStorage.setItem(LS_OWNED,    JSON.stringify(row.owned || {}));
+      localStorage.setItem(LS_WISHLIST, JSON.stringify(row.wishlist || {}));
+      localStorage.setItem(LS_DATES,    JSON.stringify(row.dates || {}));
+      localStorage.setItem(LS_SYNCED, row.updated_at);
+    }
+    renderAccount();
+    if (typeof ALBUMS !== 'undefined' && ALBUMS.length) { updateCounts(); applyFilters(); }
+  } catch (e) { syncMsg = t('syncErr'); renderAccount(); }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && SESSION && !localStorage.getItem(LS_DIRTY)) pullState(); });
 
 // ═══════════════════════════════════════════════════════════
 //  SUPABASE FETCH
@@ -669,6 +810,7 @@ async function init() {
   buildDecades();
   updateCounts();
   applyFilters();
+  if (SESSION) pullState();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1357,7 +1499,9 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  START
 // ═══════════════════════════════════════════════════════════
+takeSessionFromUrl();
 applyStaticI18n();
+renderAccount();
 init();
 </script>
 </body>
