@@ -470,6 +470,10 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
   <div id="scan-head"><span data-i18n="scanTitle">Scan barcode</span><button id="scan-close" onclick="closeScan()" data-i18n="scanClose">Close</button></div>
   <div id="scan-reader"></div>
   <div id="scan-hint" data-i18n="scanHint"></div>
+  <div id="scan-photo-row" style="max-width:520px;width:100%;margin:0 auto;padding:6px 14px">
+    <label class="scan-btn2" style="display:inline-block;cursor:pointer"><span data-i18n="scanPhoto">Take a photo</span>
+      <input type="file" accept="image/*" capture="environment" style="display:none" onchange="scanPhoto(this)"></label>
+  </div>
   <form id="scan-manual" onsubmit="scanManual(event)"><input id="scan-code" inputmode="numeric" pattern="[0-9 ]*" data-i18n-ph="scanPh"><button type="submit" data-i18n="scanGo">Search</button></form>
   <div id="scan-result"></div>
 </div>
@@ -500,7 +504,7 @@ const I18N = {
     liveOne:'{n} concert scheduled · next {date}, {place}', liveMany:'{n} concerts scheduled · next {date}, {place}',
     statAlbums:'{n} albums in the catalog', statCovers:'{n} covers available', statOwned:'{o} owned · {w} wishlist',
     statConcerts:'{n} concerts scheduled ({link})', ecmSource:'ECM source', resAlbums:'{n} albums', locale:'en-GB',
-    scan:'Scan barcode', scanTitle:'Scan barcode', scanClose:'Close', scanHint:'Point the camera at the barcode on the back of the cover.', scanPh:'or type the code', scanGo:'Search', scanCamErr:'Camera not available. Type the code instead.', scanNotFound:'Not found in the catalog.', scanOwned:'In your collection', scanWish:'In your wishlist', scanNone:'Not in your collection', scanAddOwned:'Add to collection', scanAddWish:'Add to wishlist', scanTaste:'Taste match (estimate)', scanShared:'shared musicians with your albums', scanNoShared:'No overlap with your collection yet', scanRating:'MusicBrainz rating', scanVotes:'votes', scanNoRating:'No rating available', scanReopen:'Open the camera again', scanDiscogs:'Search on Discogs', scanCode:'Barcode: ', menuLbl:'Menu',
+    scan:'Scan barcode', scanPhoto:'Take a photo of the barcode', scanNoRead:'Barcode not readable in the photo. Try closer, or type the code.', scanTitle:'Scan barcode', scanClose:'Close', scanHint:'Hold the phone about 15 cm away and avoid glare. If it does not read, take a photo.', scanPh:'or type the code', scanGo:'Search', scanCamErr:'Camera not available. Type the code instead.', scanNotFound:'Not found in the catalog.', scanOwned:'In your collection', scanWish:'In your wishlist', scanNone:'Not in your collection', scanAddOwned:'Add to collection', scanAddWish:'Add to wishlist', scanTaste:'Taste match (estimate)', scanShared:'shared musicians with your albums', scanNoShared:'No overlap with your collection yet', scanRating:'MusicBrainz rating', scanVotes:'votes', scanNoRating:'No rating available', scanReopen:'Open the camera again', scanDiscogs:'Search on Discogs', scanCode:'Barcode: ', menuLbl:'Menu',
     signIn:'Sign in to sync', emailPh:'your email', sendLink:'Send link', linkSent:'Check your email for the sign-in link.', syncedAs:'Synced as', signOut:'Sign out', syncErr:'Sync error',
     allCountries:'All countries', nArtists:'{n} artists', nConcerts:'Concerts: {n}', discography:'Discography ({n})', nextLabel:'Next: ',
     bioFrom:'Biography from {link}, licensed CC BY-SA.', photoCredit:'Photo: {credit}, {license}, via {link}.', bioToggle:'Click the text to expand or collapse'
@@ -519,7 +523,7 @@ const I18N = {
     liveOne:'{n} concerto in programma · prossimo {date}, {place}', liveMany:'{n} concerti in programma · prossimo {date}, {place}',
     statAlbums:'{n} album nel catalogo', statCovers:'{n} copertine disponibili', statOwned:'{o} posseduti · {w} wishlist',
     statConcerts:'{n} concerti in programma ({link})', ecmSource:'fonte ECM', resAlbums:'{n} album', locale:'it-IT',
-    scan:'Scansiona il codice', scanTitle:'Scansiona il codice', scanClose:'Chiudi', scanHint:'Inquadra il codice a barre sul retro della copertina.', scanPh:'oppure scrivi il codice', scanGo:'Cerca', scanCamErr:'Fotocamera non disponibile. Scrivi il codice.', scanNotFound:'Non trovato nel catalogo.', scanOwned:'È nella tua collezione', scanWish:'È nella tua wishlist', scanNone:'Non è nella tua collezione', scanAddOwned:'Aggiungi alla collezione', scanAddWish:'Aggiungi alla wishlist', scanTaste:'Affinità coi tuoi gusti (stima)', scanShared:'musicisti in comune con i tuoi dischi', scanNoShared:'Nessun musicista in comune con la tua collezione', scanRating:'Voto MusicBrainz', scanVotes:'voti', scanNoRating:'Voto non disponibile', scanReopen:'Riapri la fotocamera', scanDiscogs:'Cerca su Discogs', scanCode:'Codice: ', menuLbl:'Menu',
+    scan:'Scansiona il codice', scanPhoto:'Scatta una foto del codice', scanNoRead:'Codice non leggibile nella foto. Avvicinati di più o scrivi il codice.', scanTitle:'Scansiona il codice', scanClose:'Chiudi', scanHint:'Tieni il telefono a circa 15 cm ed evita i riflessi. Se non legge, scatta una foto.', scanPh:'oppure scrivi il codice', scanGo:'Cerca', scanCamErr:'Fotocamera non disponibile. Scrivi il codice.', scanNotFound:'Non trovato nel catalogo.', scanOwned:'È nella tua collezione', scanWish:'È nella tua wishlist', scanNone:'Non è nella tua collezione', scanAddOwned:'Aggiungi alla collezione', scanAddWish:'Aggiungi alla wishlist', scanTaste:'Affinità coi tuoi gusti (stima)', scanShared:'musicisti in comune con i tuoi dischi', scanNoShared:'Nessun musicista in comune con la tua collezione', scanRating:'Voto MusicBrainz', scanVotes:'voti', scanNoRating:'Voto non disponibile', scanReopen:'Riapri la fotocamera', scanDiscogs:'Cerca su Discogs', scanCode:'Codice: ', menuLbl:'Menu',
     signIn:'Accedi per sincronizzare', emailPh:'la tua email', sendLink:'Invia link', linkSent:'Controlla la email: ti ho inviato il link di accesso.', syncedAs:'Sincronizzato come', signOut:'Esci', syncErr:'Errore di sincronizzazione',
     allCountries:'Tutti i paesi', nArtists:'{n} artisti', nConcerts:'Concerti: {n}', discography:'Discografia ({n})', nextLabel:'Prossimo: ',
     bioFrom:'Biografia da {link}, licenza CC BY-SA.', photoCredit:'Foto: {credit}, {license}, tramite {link}.', bioToggle:'Clic sul testo per espandere o ridurre'
@@ -538,7 +542,7 @@ const I18N = {
     liveOne:'{n} concert prévu · prochain {date}, {place}', liveMany:'{n} concerts prévus · prochain {date}, {place}',
     statAlbums:'{n} albums au catalogue', statCovers:'{n} pochettes disponibles', statOwned:'{o} possédés · {w} souhaits',
     statConcerts:'{n} concerts prévus ({link})', ecmSource:'source ECM', resAlbums:'{n} albums', locale:'fr-FR',
-    scan:'Scanner le code', scanTitle:'Scanner le code', scanClose:'Fermer', scanHint:'Visez le code-barres au dos de la pochette.', scanPh:'ou saisissez le code', scanGo:'Chercher', scanCamErr:'Caméra indisponible. Saisissez le code.', scanNotFound:'Introuvable dans le catalogue.', scanOwned:'Dans votre collection', scanWish:'Dans votre wishlist', scanNone:'Pas dans votre collection', scanAddOwned:'Ajouter à la collection', scanAddWish:'Ajouter à la wishlist', scanTaste:'Affinité avec vos goûts (estimation)', scanShared:'musiciens en commun avec vos disques', scanNoShared:'Aucun musicien en commun avec votre collection', scanRating:'Note MusicBrainz', scanVotes:'votes', scanNoRating:'Note indisponible', scanReopen:'Rouvrir la caméra', scanDiscogs:'Chercher sur Discogs', scanCode:'Code : ', menuLbl:'Menu',
+    scan:'Scanner le code', scanPhoto:'Prendre une photo du code', scanNoRead:'Code illisible sur la photo. Rapprochez-vous ou saisissez le code.', scanTitle:'Scanner le code', scanClose:'Fermer', scanHint:'Tenez le téléphone à environ 15 cm, évitez les reflets. Sinon, prenez une photo.', scanPh:'ou saisissez le code', scanGo:'Chercher', scanCamErr:'Caméra indisponible. Saisissez le code.', scanNotFound:'Introuvable dans le catalogue.', scanOwned:'Dans votre collection', scanWish:'Dans votre wishlist', scanNone:'Pas dans votre collection', scanAddOwned:'Ajouter à la collection', scanAddWish:'Ajouter à la wishlist', scanTaste:'Affinité avec vos goûts (estimation)', scanShared:'musiciens en commun avec vos disques', scanNoShared:'Aucun musicien en commun avec votre collection', scanRating:'Note MusicBrainz', scanVotes:'votes', scanNoRating:'Note indisponible', scanReopen:'Rouvrir la caméra', scanDiscogs:'Chercher sur Discogs', scanCode:'Code : ', menuLbl:'Menu',
     signIn:'Se connecter pour synchroniser', emailPh:'votre e-mail', sendLink:'Envoyer le lien', linkSent:'Vérifiez votre e-mail : le lien de connexion est envoyé.', syncedAs:'Synchronisé en tant que', signOut:'Se déconnecter', syncErr:'Erreur de synchronisation',
     allCountries:'Tous les pays', nArtists:'{n} artistes', nConcerts:'Concerts: {n}', discography:'Discographie ({n})', nextLabel:'Prochain : ',
     bioFrom:'Biographie issue de {link}, licence CC BY-SA.', photoCredit:'Photo : {credit}, {license}, via {link}.', bioToggle:'Cliquez sur le texte pour développer ou réduire'
@@ -557,7 +561,7 @@ const I18N = {
     liveOne:'{n} Konzert geplant · nächstes {date}, {place}', liveMany:'{n} Konzerte geplant · nächstes {date}, {place}',
     statAlbums:'{n} Alben im Katalog', statCovers:'{n} Cover verfügbar', statOwned:'{o} im Besitz · {w} Wunschliste',
     statConcerts:'{n} Konzerte geplant ({link})', ecmSource:'ECM-Quelle', resAlbums:'{n} Alben', locale:'de-DE',
-    scan:'Barcode scannen', scanTitle:'Barcode scannen', scanClose:'Schließen', scanHint:'Richten Sie die Kamera auf den Barcode auf der Rückseite.', scanPh:'oder Code eingeben', scanGo:'Suchen', scanCamErr:'Kamera nicht verfügbar. Code eingeben.', scanNotFound:'Nicht im Katalog gefunden.', scanOwned:'In Ihrer Sammlung', scanWish:'In Ihrer Wunschliste', scanNone:'Nicht in Ihrer Sammlung', scanAddOwned:'Zur Sammlung hinzufügen', scanAddWish:'Zur Wunschliste hinzufügen', scanTaste:'Geschmacks-Übereinstimmung (Schätzung)', scanShared:'gemeinsame Musiker mit Ihren Alben', scanNoShared:'Keine Überschneidung mit Ihrer Sammlung', scanRating:'MusicBrainz-Bewertung', scanVotes:'Stimmen', scanNoRating:'Keine Bewertung verfügbar', scanReopen:'Kamera erneut öffnen', scanDiscogs:'Auf Discogs suchen', scanCode:'Code: ', menuLbl:'Menü',
+    scan:'Barcode scannen', scanPhoto:'Foto vom Barcode aufnehmen', scanNoRead:'Barcode im Foto nicht lesbar. Näher heran oder Code eingeben.', scanTitle:'Barcode scannen', scanClose:'Schließen', scanHint:'Halten Sie das Handy etwa 15 cm entfernt, vermeiden Sie Spiegelungen. Sonst ein Foto aufnehmen.', scanPh:'oder Code eingeben', scanGo:'Suchen', scanCamErr:'Kamera nicht verfügbar. Code eingeben.', scanNotFound:'Nicht im Katalog gefunden.', scanOwned:'In Ihrer Sammlung', scanWish:'In Ihrer Wunschliste', scanNone:'Nicht in Ihrer Sammlung', scanAddOwned:'Zur Sammlung hinzufügen', scanAddWish:'Zur Wunschliste hinzufügen', scanTaste:'Geschmacks-Übereinstimmung (Schätzung)', scanShared:'gemeinsame Musiker mit Ihren Alben', scanNoShared:'Keine Überschneidung mit Ihrer Sammlung', scanRating:'MusicBrainz-Bewertung', scanVotes:'Stimmen', scanNoRating:'Keine Bewertung verfügbar', scanReopen:'Kamera erneut öffnen', scanDiscogs:'Auf Discogs suchen', scanCode:'Code: ', menuLbl:'Menü',
     signIn:'Anmelden zum Synchronisieren', emailPh:'Ihre E-Mail', sendLink:'Link senden', linkSent:'Prüfen Sie Ihre E-Mail: Der Anmeldelink wurde gesendet.', syncedAs:'Synchronisiert als', signOut:'Abmelden', syncErr:'Synchronisierungsfehler',
     allCountries:'Alle Länder', nArtists:'{n} Künstler', nConcerts:'Konzerte: {n}', discography:'Diskografie ({n})', nextLabel:'Nächstes: ',
     bioFrom:'Biografie von {link}, Lizenz CC BY-SA.', photoCredit:'Foto: {credit}, {license}, über {link}.', bioToggle:'Text anklicken zum Ein- oder Ausklappen'
@@ -576,7 +580,7 @@ const I18N = {
     liveOne:'{n} concierto programado · próximo {date}, {place}', liveMany:'{n} conciertos programados · próximo {date}, {place}',
     statAlbums:'{n} álbumes en el catálogo', statCovers:'{n} portadas disponibles', statOwned:'{o} en colección · {w} deseos',
     statConcerts:'{n} conciertos programados ({link})', ecmSource:'fuente ECM', resAlbums:'{n} álbumes', locale:'es-ES',
-    scan:'Escanear código', scanTitle:'Escanear código', scanClose:'Cerrar', scanHint:'Apunta la cámara al código de barras de la contraportada.', scanPh:'o escribe el código', scanGo:'Buscar', scanCamErr:'Cámara no disponible. Escribe el código.', scanNotFound:'No encontrado en el catálogo.', scanOwned:'En tu colección', scanWish:'En tu lista de deseos', scanNone:'No está en tu colección', scanAddOwned:'Añadir a la colección', scanAddWish:'Añadir a deseos', scanTaste:'Afinidad con tus gustos (estimación)', scanShared:'músicos en común con tus discos', scanNoShared:'Ningún músico en común con tu colección', scanRating:'Valoración MusicBrainz', scanVotes:'votos', scanNoRating:'Valoración no disponible', scanReopen:'Reabrir la cámara', scanDiscogs:'Buscar en Discogs', scanCode:'Código: ', menuLbl:'Menú',
+    scan:'Escanear código', scanPhoto:'Hacer una foto del código', scanNoRead:'Código ilegible en la foto. Acércate o escribe el código.', scanTitle:'Escanear código', scanClose:'Cerrar', scanHint:'Sostén el móvil a unos 15 cm y evita los reflejos. Si no lee, haz una foto.', scanPh:'o escribe el código', scanGo:'Buscar', scanCamErr:'Cámara no disponible. Escribe el código.', scanNotFound:'No encontrado en el catálogo.', scanOwned:'En tu colección', scanWish:'En tu lista de deseos', scanNone:'No está en tu colección', scanAddOwned:'Añadir a la colección', scanAddWish:'Añadir a deseos', scanTaste:'Afinidad con tus gustos (estimación)', scanShared:'músicos en común con tus discos', scanNoShared:'Ningún músico en común con tu colección', scanRating:'Valoración MusicBrainz', scanVotes:'votos', scanNoRating:'Valoración no disponible', scanReopen:'Reabrir la cámara', scanDiscogs:'Buscar en Discogs', scanCode:'Código: ', menuLbl:'Menú',
     signIn:'Inicia sesión para sincronizar', emailPh:'tu correo', sendLink:'Enviar enlace', linkSent:'Revisa tu correo: te enviamos el enlace de acceso.', syncedAs:'Sincronizado como', signOut:'Cerrar sesión', syncErr:'Error de sincronización',
     allCountries:'Todos los países', nArtists:'{n} artistas', nConcerts:'Conciertos: {n}', discography:'Discografía ({n})', nextLabel:'Próximo: ',
     bioFrom:'Biografía de {link}, licencia CC BY-SA.', photoCredit:'Foto: {credit}, {license}, vía {link}.', bioToggle:'Haz clic en el texto para ampliar o reducir'
@@ -1059,8 +1063,12 @@ async function startScan() {
   try {
     await loadScanLib();
     const F = Html5QrcodeSupportedFormats;
-    scanner = new Html5Qrcode('scan-reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], verbose: false });
-    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 280, height: 140 } },
+    scanner = new Html5Qrcode('scan-reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], verbose: false,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+    // senza qrbox legge l'intero fotogramma; video ad alta risoluzione e fuoco continuo per i codici piccoli
+    await scanner.start({ facingMode: 'environment' },
+      { fps: 12, videoConstraints: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 },
+          advanced: [{ focusMode: 'continuous' }] } },
       txt => { stopScan(); handleCode(txt); }, () => {});
   } catch (e) {
     document.getElementById('scan-hint').textContent = t('scanCamErr');
@@ -1071,6 +1079,24 @@ async function stopScan() {
   if (sc) { try { await sc.stop(); sc.clear(); } catch (e) {} }
 }
 function closeScan() { stopScan(); document.getElementById('scan-overlay').classList.remove('open'); }
+async function scanPhoto(input) {
+  const f = input.files && input.files[0];
+  input.value = '';
+  if (!f) return;
+  document.getElementById('scan-hint').textContent = '…';
+  try {
+    await stopScan();
+    await loadScanLib();
+    const F = Html5QrcodeSupportedFormats;
+    const h = new Html5Qrcode('scan-reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], verbose: false,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+    const txt = await h.scanFile(f, false);
+    try { h.clear(); } catch (e) {}
+    handleCode(txt);
+  } catch (e) {
+    document.getElementById('scan-hint').textContent = t('scanNoRead');
+  }
+}
 function scanManual(ev) {
   ev.preventDefault();
   const c = document.getElementById('scan-code').value;
