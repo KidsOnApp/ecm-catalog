@@ -259,7 +259,8 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 #scan-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;color:var(--text);font-size:14px;font-weight:600}
 #scan-close{background:none;border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer}
 #scan-reader{width:100%;max-width:520px;margin:0 auto;min-height:0}
-#scan-reader video{border-radius:8px}
+#scan-reader video{border-radius:8px;max-height:42vh;object-fit:cover}
+#scan-reader{max-height:44vh;overflow:hidden}
 #scan-hint{color:var(--text3);font-size:12px;text-align:center;padding:8px 14px}
 #scan-manual{display:flex;gap:6px;padding:6px 14px;max-width:520px;width:100%;margin:0 auto}
 #scan-manual input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:8px;font-size:16px}
@@ -468,12 +469,12 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 <div id="menu-scrim" onclick="toggleMenu()"></div>
 <div id="scan-overlay">
   <div id="scan-head"><span data-i18n="scanTitle">Scan barcode</span><button id="scan-close" onclick="closeScan()" data-i18n="scanClose">Close</button></div>
-  <div id="scan-reader"></div>
-  <div id="scan-hint" data-i18n="scanHint"></div>
   <div id="scan-photo-row" style="max-width:520px;width:100%;margin:0 auto;padding:6px 14px">
-    <label class="scan-btn2" style="display:inline-block;cursor:pointer"><span data-i18n="scanPhoto">Take a photo</span>
+    <label class="scan-btn2" style="display:block;text-align:center;cursor:pointer;background:var(--accent2);color:#fff;border:none;padding:12px;font-size:15px;font-weight:600"><span data-i18n="scanPhoto">Take a photo</span>
       <input type="file" accept="image/*" capture="environment" style="display:none" onchange="scanPhoto(this)"></label>
   </div>
+  <div id="scan-reader"></div>
+  <div id="scan-hint" data-i18n="scanHint"></div>
   <form id="scan-manual" onsubmit="scanManual(event)"><input id="scan-code" inputmode="numeric" pattern="[0-9 ]*" data-i18n-ph="scanPh"><button type="submit" data-i18n="scanGo">Search</button></form>
   <div id="scan-result"></div>
 </div>
