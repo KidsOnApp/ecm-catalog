@@ -1043,6 +1043,130 @@ function renderLivePage() {
 function toggleMenu() { document.body.classList.toggle('menu-open'); }
 document.getElementById('nav').addEventListener('click', e => { if (e.target.closest('.nav-btn')) document.body.classList.remove('menu-open'); });
 
+// ── Lettore EAN-13 / UPC-A proprio: prova più righe e più angoli (più robusto con le foto dell'iPhone) ──
+const EAN_L = ['3211','2221','2122','1411','1132','1231','1114','1312','1213','3112'];
+const EAN_G = ['1123','1222','2212','1141','2311','1321','4111','2131','3121','2113'];
+const EAN_PAR = ['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+function eanMatch(w4) {
+  const s = w4[0] + w4[1] + w4[2] + w4[3]; if (s <= 0) return null;
+  const u = s / 7; let best = null, bd = 1e9;
+  for (const [set, tab] of [['L', EAN_L], ['G', EAN_G]]) for (let d = 0; d < 10; d++) {
+    let e = 0; for (let k = 0; k < 4; k++) { const x = w4[k] / u - +tab[d][k]; e += x * x; }
+    if (e < bd) { bd = e; best = { d, set }; }
+  }
+  return bd < 1.2 ? best : null;
+}
+function eanCheck13(c) { let s = 0; for (let i = 0; i < 12; i++) s += +c[i] * (i % 2 ? 3 : 1); return (10 - s % 10) % 10 === +c[12]; }
+function eanFromRuns(runs, firstDark) {
+  // runs: larghezze alternate; firstDark: il primo run è una barra
+  for (let i = 0; i + 59 <= runs.length; i++) {
+    const dark = (i % 2 === 0) === firstDark; if (!dark) continue;
+    const seg = runs.slice(i, i + 59); let tot = 0; for (const x of seg) tot += x; const u = tot / 95;
+    if (u < 1) continue;
+    const g = (a, b, c) => a / u > 0.5 && a / u < 1.8 && b / u > 0.5 && b / u < 1.8 && c / u > 0.5 && c / u < 1.8;
+    if (!g(seg[0], seg[1], seg[2]) || !g(seg[56], seg[57], seg[58])) continue;
+    const mid = seg.slice(27, 32); if (!(mid.every(x => x / u > 0.5 && x / u < 1.8))) continue;
+    let digits = [], par = '', ok = true;
+    for (let k = 0; k < 6 && ok; k++) { const m = eanMatch(seg.slice(3 + k * 4, 7 + k * 4)); if (!m) ok = false; else { digits.push(m.d); par += m.set; } }
+    if (!ok) continue;
+    const first = EAN_PAR.indexOf(par); if (first < 0) continue;
+    for (let k = 0; k < 6 && ok; k++) { const m = eanMatch(seg.slice(32 + k * 4, 36 + k * 4)); if (!m || m.set !== 'L') ok = false; else digits.push(m.d); }
+    if (!ok) continue;
+    const code = String(first) + digits.join('');
+    if (eanCheck13(code)) return code;
+  }
+  return null;
+}
+function eanFromRow(row) {
+  const n = row.length, win = Math.max(15, (n / 8) | 0);
+  const pre = new Float64Array(n + 1); for (let i = 0; i < n; i++) pre[i + 1] = pre[i] + row[i];
+  const bin = new Uint8Array(n);
+  for (let i = 0; i < n; i++) { const a = Math.max(0, i - win), b = Math.min(n, i + win); const m = (pre[b] - pre[a]) / (b - a); bin[i] = row[i] < m - 4 ? 1 : 0; }
+  const runs = []; let cur = bin[0], len = 1;
+  for (let i = 1; i < n; i++) { if (bin[i] === cur) len++; else { runs.push(len); cur = bin[i]; len = 1; } }
+  runs.push(len);
+  const fd = bin[0] === 1;
+  let r = eanFromRuns(runs, fd); if (r) return r;
+  const rev = runs.slice().reverse(); const lastDark = ((runs.length - 1) % 2 === 0) ? fd : !fd;
+  return eanFromRuns(rev, lastDark);
+}
+function eanFromGray(g, w, h) {
+  const rows = 48;
+  for (let k = 0; k < rows; k++) {
+    // righe dal centro verso l'esterno
+    const f = 0.5 + ((k % 2 ? 1 : -1) * Math.ceil(k / 2)) / (rows + 2) * 0.95;
+    const y = Math.min(h - 1, Math.max(0, Math.round(f * h)));
+    const code = eanFromRow(g.subarray(y * w, y * w + w)); if (code) return code;
+  }
+  return null;
+}
+function rotGray(g, w, h, deg) {
+  const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), cx = w / 2, cy = h / 2;
+  const o = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = x - cx, dy = y - cy;
+    const sx = Math.round(c * dx + s * dy + cx), sy = Math.round(-s * dx + c * dy + cy);
+    o[y * w + x] = (sx >= 0 && sx < w && sy >= 0 && sy < h) ? g[sy * w + sx] : 128;
+  }
+  return o;
+}
+function eanFromGrayAny(g, w, h) {
+  for (const a of [0, -6, 6, -12, 12, -18, 18, -25, 25, -35, 35]) {
+    const r = a === 0 ? eanFromGray(g, w, h) : eanFromGray(rotGray(g, w, h, a), w, h);
+    if (r) return r;
+  }
+  return null;
+}
+
+function grayFromImage(img, maxW, rot) {
+  const sw = img.naturalWidth || img.videoWidth || img.width, sh = img.naturalHeight || img.videoHeight || img.height;
+  const sc = Math.min(1, maxW / Math.max(sw, sh));
+  const dw = Math.round(sw * sc), dh = Math.round(sh * sc);
+  const swap = rot === 90 || rot === 270;
+  const cv = document.createElement('canvas'); cv.width = swap ? dh : dw; cv.height = swap ? dw : dh;
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  cx.translate(cv.width / 2, cv.height / 2); cx.rotate(rot * Math.PI / 180);
+  cx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+  const d = cx.getImageData(0, 0, cv.width, cv.height).data, n = cv.width * cv.height, g = new Uint8Array(n);
+  for (let i = 0, j = 0; i < n; i++, j += 4) g[i] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) >> 8;
+  return { g, w: cv.width, h: cv.height };
+}
+function decodeImageEan(img, widths, rots) {
+  for (const mw of widths) for (const rot of rots) {
+    const { g, w, h } = grayFromImage(img, mw, rot);
+    const c = eanFromGrayAny(g, w, h); if (c) return c;
+  }
+  return null;
+}
+function loadImageFile(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { res(im); setTimeout(() => URL.revokeObjectURL(url), 5000); };
+    im.onerror = () => rej(new Error('img')); im.src = url;
+  });
+}
+async function decodePhotoEan(file) {
+  const im = await loadImageFile(file);
+  return decodeImageEan(im, [1600, 1000, 2400], [0, 90, 270]);
+}
+let liveTimer = null, liveBusy = false;
+function startLiveDecode() {
+  clearInterval(liveTimer);
+  liveTimer = setInterval(() => {
+    if (liveBusy || !scanner) return;
+    const v = document.querySelector('#scan-reader video');
+    if (!v || !v.videoWidth) return;
+    liveBusy = true;
+    setTimeout(() => {
+      try {
+        const c = decodeImageEan(v, [1280], [0]);
+        if (c && scanner) { stopScan(); handleCode(c); }
+      } catch (e) {}
+      liveBusy = false;
+    }, 0);
+  }, 600);
+}
+
 let scanner = null, scanLibPromise = null, lastScanAlbum = null;
 function loadScanLib() {
   if (window.Html5Qrcode) return Promise.resolve();
@@ -1071,11 +1195,13 @@ async function startScan() {
       { fps: 12, videoConstraints: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 },
           advanced: [{ focusMode: 'continuous' }] } },
       txt => { stopScan(); handleCode(txt); }, () => {});
+    startLiveDecode();
   } catch (e) {
     document.getElementById('scan-hint').textContent = t('scanCamErr');
   }
 }
 async function stopScan() {
+  clearInterval(liveTimer);
   const sc = scanner; scanner = null;
   if (sc) { try { await sc.stop(); sc.clear(); } catch (e) {} }
 }
@@ -1085,18 +1211,20 @@ async function scanPhoto(input) {
   input.value = '';
   if (!f) return;
   document.getElementById('scan-hint').textContent = '…';
-  try {
-    await stopScan();
-    await loadScanLib();
-    const F = Html5QrcodeSupportedFormats;
-    const h = new Html5Qrcode('scan-reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], verbose: false,
-      experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
-    const txt = await h.scanFile(f, false);
-    try { h.clear(); } catch (e) {}
-    handleCode(txt);
-  } catch (e) {
-    document.getElementById('scan-hint').textContent = t('scanNoRead');
+  await stopScan();
+  let code = null;
+  try { code = await decodePhotoEan(f); } catch (e) {}
+  if (!code) {                       // piano B: libreria html5-qrcode
+    try {
+      await loadScanLib();
+      const F = Html5QrcodeSupportedFormats;
+      const h = new Html5Qrcode('scan-reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], verbose: false });
+      code = await h.scanFile(f, false);
+      try { h.clear(); } catch (e) {}
+    } catch (e) {}
   }
+  if (code) handleCode(code);
+  else document.getElementById('scan-hint').textContent = t('scanNoRead');
 }
 function scanManual(ev) {
   ev.preventDefault();
