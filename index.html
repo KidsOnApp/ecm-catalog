@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build 2026-11-16e -->
+<!-- build 2026-11-16f -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -1964,6 +1964,7 @@ takeSessionFromUrl();
 applyStaticI18n();
 renderAccount();
 init();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
