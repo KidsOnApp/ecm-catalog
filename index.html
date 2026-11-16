@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build 2026-11-16 -->
+<!-- build 2026-11-16b -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -79,7 +79,10 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
   padding:18px 6px 6px;background:linear-gradient(transparent,rgba(0,0,0,.75));opacity:0;
   transition:opacity .15s;pointer-events:none}
 .album-card:hover .card-actions,.album-card:focus-within .card-actions{opacity:1;pointer-events:auto}
-@media (hover:none){.card-actions{opacity:1;pointer-events:auto;padding-top:6px;background:none;justify-content:flex-end}}
+/* Touch: a riposo solo piccoli indicatori per i dischi posseduti / in wishlist; niente pulsanti (si usa la scheda) */
+@media (hover:none){.card-actions{opacity:1;pointer-events:none;padding:6px;background:none;justify-content:flex-end;gap:4px}
+  .card-actions button{display:none;width:20px;height:20px;font-size:11px;opacity:.85;border-color:transparent}
+  .card-actions button.on{display:block}}
 .card-actions button{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.35);
   background:rgba(20,20,20,.85);color:#fff;font-size:15px;line-height:1;cursor:pointer;padding:0}
 .card-actions button:hover{background:var(--accent);border-color:var(--accent)}
