@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build 2026-11-16d -->
+<!-- build 2026-11-16e -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -225,6 +225,8 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:200;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 #loading-screen.hidden{display:none}
+#splash-icon{width:96px;height:96px;border-radius:22px}
+#splash-name{font-size:22px;letter-spacing:.12em;text-transform:uppercase;color:var(--text);margin-bottom:6px}
 .spinner{width:24px;height:24px;border:2px solid var(--border2);
   border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -345,6 +347,8 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 
 <!-- LOADING SCREEN -->
 <div id="loading-screen">
+  <img id="splash-icon" src="icon-192.png" alt="" width="96" height="96">
+  <div id="splash-name">Nordicgrund</div>
   <div class="spinner"></div>
   <div id="loading-msg" data-i18n="loading">Caricamento catalogo…</div>
 </div>
@@ -934,22 +938,44 @@ async function loadConcerts() {
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
-async function init() {
-  try {
-    const [albums, concerts, artists] = await Promise.all([loadAlbums(), loadConcerts(), loadArtists()]);
-    ALBUMS = albums;
-    ARTISTS = artists;
-    CONCERTS = concerts;
-  } catch(e) {
-    document.getElementById('loading-msg').textContent = t('loadError') + e.message;
-    return;
-  }
+// Copia locale del catalogo: dalla seconda apertura la pagina parte subito e si aggiorna in secondo piano
+const LS_CACHE = 'ng_cache_v1';
+function readCacheRaw() { try { return localStorage.getItem(LS_CACHE); } catch (e) { return null; } }
+function showApp(first) {
   linkAllConcerts();
   document.getElementById('loading-screen').classList.add('hidden');
-  buildDecades();
+  if (first) buildDecades();
   updateCounts();
   applyFilters();
-  if (SESSION) pullState();
+}
+async function init() {
+  let shown = false;
+  const raw0 = readCacheRaw();
+  if (raw0) {
+    try {
+      const c = JSON.parse(raw0);
+      if (Array.isArray(c.albums) && c.albums.length) {
+        const today = new Date().toISOString().slice(0, 10);
+        ALBUMS = c.albums; ARTISTS = c.artists || {};
+        CONCERTS = (c.concerts || []).filter(x => x.date >= today);
+        showApp(true); shown = true;
+        if (SESSION) pullState();
+      }
+    } catch (e) {}
+  }
+  try {
+    const [albums, concerts, artists] = await Promise.all([loadAlbums(), loadConcerts(), loadArtists()]);
+    const raw = JSON.stringify({ albums, concerts, artists });
+    try { localStorage.setItem(LS_CACHE, raw); } catch (e) { try { localStorage.removeItem(LS_CACHE); } catch (_) {} }
+    if (!shown || raw !== raw0) {
+      ALBUMS = albums; ARTISTS = artists; CONCERTS = concerts;
+      showApp(!shown);
+      if (!shown && SESSION) pullState();
+      shown = true;
+    }
+  } catch(e) {
+    if (!shown) document.getElementById('loading-msg').textContent = t('loadError') + e.message;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
