@@ -1,0 +1,30 @@
+name: Make Cover Thumbnails
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Rifai anche le miniature gia presenti'
+        type: boolean
+        default: false
+
+jobs:
+  thumbs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pillow
+      - name: Crea le miniature
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then
+            python make_thumbs.py --force
+          else
+            python make_thumbs.py
+          fi
