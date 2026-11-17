@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<!-- build 2026-11-16f -->
+<!-- build 2026-11-17 -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta name="color-scheme" content="dark">
+<style>html,body{background:#0a0a0a}</style>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -951,6 +953,7 @@ function showApp(first) {
 async function init() {
   let shown = false;
   const raw0 = readCacheRaw();
+  await new Promise(r => (window.requestAnimationFrame || setTimeout)(() => setTimeout(r, 0)));
   if (raw0) {
     try {
       const c = JSON.parse(raw0);
@@ -1491,6 +1494,9 @@ function sortFiltered() {
 // ═══════════════════════════════════════════════════════════
 // Copertine già caricate: al ridisegno della griglia restano visibili (niente lampeggio nero)
 const LOADED_COVERS = new Set();
+// Miniatura (covers/thumbs/...) per la griglia; se manca, l'immagine ricade sull'originale
+function thumbUrl(u) { return u && u.includes('/public/covers/') && !u.includes('/covers/thumbs/') ? u.replace('/public/covers/', '/public/covers/thumbs/') : u; }
+let GRID_TOKEN = 0;
 
 function renderGrid() {
   const owned    = getOwned();
@@ -1505,13 +1511,13 @@ function renderGrid() {
   }
   empty.classList.remove('show');
 
-  grid.innerHTML = filtered.map(a => {
+  const cards = filtered.map(a => {
     const isOwned = owned[a.id];
     const isWish  = wishlist[a.id];
     const ind = isOwned ? '<span class="ind ind-owned"></span>'
                : isWish ? '<span class="ind ind-wish"></span>' : '';
     const cover = a.cover_url
-      ? `<img src="${a.cover_url}"${LOADED_COVERS.has(a.cover_url) ? ' class="loaded"' : ''} loading="lazy" alt="" onload="LOADED_COVERS.add(this.getAttribute('src'));this.classList.add('loaded')">`
+      ? `<img src="${thumbUrl(a.cover_url)}"${LOADED_COVERS.has(a.cover_url) ? ' class="loaded"' : ''} loading="lazy" decoding="async" alt="" data-full="${esc(a.cover_url)}" onload="LOADED_COVERS.add(this.dataset.full);this.classList.add('loaded')" onerror="if(this.src!==this.dataset.full)this.src=this.dataset.full">`
       : '';
     const lv = albumLive(a);
     const liveMark = lv.lead.length
@@ -1540,7 +1546,18 @@ function renderGrid() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  });
+  // prima i dischi visibili, il resto a blocchi senza bloccare lo schermo
+  const FIRST = 36, STEP = 200, tok = ++GRID_TOKEN;
+  grid.innerHTML = cards.slice(0, FIRST).join('');
+  let i = FIRST;
+  const more = () => {
+    if (tok !== GRID_TOKEN || i >= cards.length) return;
+    grid.insertAdjacentHTML('beforeend', cards.slice(i, i + STEP).join(''));
+    i += STEP;
+    setTimeout(more, 0);
+  };
+  if (i < cards.length) setTimeout(more, 30);
 }
 
 function esc(s) {
