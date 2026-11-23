@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build 2026-11-17 -->
+<!-- build 2026-11-23 -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -984,10 +984,16 @@ async function init() {
 // ═══════════════════════════════════════════════════════════
 //  FILTERING & SORTING
 // ═══════════════════════════════════════════════════════════
+// Ricerca: minuscole, senza accenti, parole separate (ignora gli spazi in più, es. quello che aggiunge la tastiera dell'iPhone)
+function fold(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+function searchWords() { const q = fold(currentSearch).trim(); return q ? q.split(/\s+/) : []; }
+function matchWords(text, words) { const h = fold(text); return words.every(w => h.includes(w)); }
+
 function applyFilters() {
   const owned    = getOwned();
   const wishlist = getWishlist();
-  const q = currentSearch.toLowerCase();
+  const words = searchWords();
+  const q = words.length > 0;
 
   filtered = ALBUMS.filter(a => {
     if (currentView === 'owned'    && !owned[a.id])    return false;
@@ -1001,8 +1007,8 @@ function applyFilters() {
       if (isNaN(y) || Math.floor(y / 10) * 10 !== activeDecade) return false;
     }
     if (q) {
-      const hay = (a.catalog + ' ' + a.artist + ' ' + a.title + ' ' + a.musicians).toLowerCase();
-      if (!hay.includes(q)) return false;
+      const hay = a._hay || (a._hay = fold(a.catalog + ' ' + a.artist + ' ' + a.title + ' ' + a.musicians + ' ' + (a.musicianList || []).join(' ')));
+      if (!words.every(w => hay.includes(w))) return false;
     }
     return true;
   });
@@ -1098,12 +1104,13 @@ function setLiveCountry(v) { liveCountry = v; renderLivePage(); }
 function discoCount(name) { return ALBUMS.filter(a => artistMatch(a, name)).length; }
 function renderLivePage() {
   const box = document.getElementById('live-page');
-  const q = currentSearch.toLowerCase();
+  const words = searchWords();
+  const q = words.length > 0;
   const all = liveArtists();
   const countries = new Map();
   all.forEach(a => new Set(a.concerts.map(c => c.country).filter(Boolean)).forEach(k => countries.set(k, (countries.get(k) || 0) + 1)));
   if (liveCountry && !countries.has(liveCountry)) liveCountry = '';
-  const list = all.filter(a => (!liveCountry || a.concerts.some(c => c.country === liveCountry)) && (!q || a.name.toLowerCase().includes(q)));
+  const list = all.filter(a => (!liveCountry || a.concerts.some(c => c.country === liveCountry)) && (!q || matchWords(a.name, words)));
   const opts = `<option value="">${esc(t('allCountries'))}</option>` +
     [...countries].sort((a, b) => a[0].localeCompare(b[0])).map(([k, n]) =>
       `<option value="${esc(k)}"${k === liveCountry ? ' selected' : ''}>${esc(k)} (${n})</option>`).join('');
@@ -1606,7 +1613,7 @@ function updateCounts() {
 
 function updateInfo() {
   const el = document.getElementById('results-info');
-  const base = (currentView === 'all' && !currentArtist && !currentSearch)
+  const base = (currentView === 'all' && !currentArtist && !currentSearch.trim())
     ? ALBUMS.filter(a => !compKind(a)).length : ALBUMS.length;
   el.textContent = filtered.length === base
     ? t('resAlbums', { n: base })
