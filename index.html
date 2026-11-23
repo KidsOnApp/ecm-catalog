@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build 2026-11-23 -->
+<!-- build 2026-11-23b -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -113,6 +113,10 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
 
 /* ── CONCERTI ── */
 .album-card.live-lead{border-color:rgba(95,211,163,.45)}
+/* dischi posseduti: scheda azzurrata e bordo blu */
+.album-card.owned{background:#10233a;border-color:rgba(74,158,255,.55)}
+.album-card.owned:hover{border-color:var(--accent)}
+.album-card.owned .album-info{background:linear-gradient(180deg,rgba(74,158,255,.10),rgba(74,158,255,.04))}
 .album-card.live-lead:hover{border-color:var(--live)}
 .live-badge{position:absolute;top:6px;left:6px;z-index:2;background:rgba(10,10,10,.8);
   color:var(--live);border:1px solid rgba(95,211,163,.55);border-radius:10px;font-size:9px;
@@ -1532,7 +1536,7 @@ function renderGrid() {
       : lv.all.length
         ? `<span class="live-dot" title="${esc(t('liveDot'))}"></span>`
         : '';
-    return `<div class="album-card${lv.lead.length ? ' live-lead' : ''}" onclick="openDetail('${esc(a.id)}')"${lv.lead.length ? ` title="${esc(liveTitle(lv.lead))}"` : ''}>
+    return `<div class="album-card${lv.lead.length ? ' live-lead' : ''}${isOwned ? ' owned' : ''}" onclick="openDetail('${esc(a.id)}')"${lv.lead.length ? ` title="${esc(liveTitle(lv.lead))}"` : ''}>
       <div class="album-cover">
         <div class="album-cover-bg"><span class="album-cover-num">${esc(a.catalog)}</span></div>
         ${cover}
