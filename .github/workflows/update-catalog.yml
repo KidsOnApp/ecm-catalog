@@ -34,3 +34,7 @@ jobs:
           else
             python enrich_musicians.py
           fi
+      - name: 4. Miniature delle copertine
+        run: |
+          pip install pillow
+          python make_thumbs.py
