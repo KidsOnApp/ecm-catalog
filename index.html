@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build 2026-11-24 -->
+<!-- build 2026-11-24b -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -1820,7 +1820,9 @@ function renderNewStrip(show) {
   const box = document.getElementById('new-strip');
   if (!show) { box.style.display = 'none'; return; }
   const owned = getOwned();
-  const list = ALBUMS.filter(catNum).sort((x, y) => catNum(y) - catNum(x)).slice(0, 14);
+  const yr = a => parseInt(a.year, 10) || 0;
+  const list = ALBUMS.filter(a => catNum(a) && !compKind(a))
+    .sort((x, y) => (yr(y) - yr(x)) || (catNum(y) - catNum(x))).slice(0, 14);
   box.innerHTML = `<div class="section-title">${esc(t('newTitle'))}</div><div class="new-row">` + list.map(a =>
     `<div class="new-item${owned[a.id] ? ' owned' : ''}" onclick="openDetail('${esc(a.id)}')" title="${esc(a.artist + ' – ' + a.title)}">` +
     `<div class="new-cover">${a.cover_url ? `<img src="${esc(thumbUrl(a.cover_url))}" loading="lazy" alt="" onerror="if(this.src!=='${esc(a.cover_url)}')this.src='${esc(a.cover_url)}'">` : esc(a.catalog)}</div>` +
