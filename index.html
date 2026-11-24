@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build 2026-11-23b -->
+<!-- build 2026-11-24 -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -202,6 +202,22 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
   text-decoration:none;border-bottom:1px dotted var(--border2);padding-bottom:1px;transition:all .15s}
 .mb-link:hover{color:var(--accent);border-bottom-color:var(--accent)}
 .no-credits{font-size:11px;color:var(--text3);font-style:italic}
+.buy-links{display:flex;flex-wrap:wrap;gap:8px}
+.buy-links a{display:inline-block;padding:7px 12px;border:1px solid var(--border2);border-radius:16px;color:var(--text);
+  text-decoration:none;font-size:12px;background:var(--bg3)}
+.buy-links a:hover{border-color:var(--accent);color:var(--accent)}
+.buy-links a small{color:var(--text3);margin-left:4px}
+#new-strip{margin-bottom:18px}
+#new-strip .section-title{margin:0 0 8px}
+.new-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
+.new-item{flex:0 0 132px;cursor:pointer;scroll-snap-align:start}
+.new-cover{width:132px;height:132px;border-radius:4px;background:var(--bg3);overflow:hidden;display:flex;align-items:center;justify-content:center;
+  color:var(--text3);font-size:11px}
+.new-cover img{width:100%;height:100%;object-fit:cover}
+.new-item .nt{font-size:12px;color:var(--text);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.new-item .na{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.new-item.owned .new-cover{outline:2px solid var(--accent);outline-offset:-2px}
+@media (max-width:720px){.new-item{flex-basis:108px}.new-cover{width:108px;height:108px}}
 .related-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .related-card{background:var(--bg3);border:1px solid var(--border);border-radius:4px;
   padding:8px;cursor:pointer;transition:all .15s}
@@ -429,6 +445,7 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
   <div id="artist-concerts"></div>
   <div id="live-page"></div>
   <div id="content">
+    <div id="new-strip" style="display:none"></div>
     <div id="album-grid"></div>
     <div id="empty"><h2 data-i18n="noResults">Nessun risultato</h2><p data-i18n="tryOther">Prova con altri termini di ricerca</p></div>
   </div>
@@ -461,6 +478,11 @@ body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Helveti
       </div>
     </div>
     <div id="detail-sections">
+      <div id="buy-section">
+        <div class="section-title" data-i18n="buyTitle">Dove trovarlo</div>
+        <div class="buy-links" id="buy-links"></div>
+        <div class="source-note" id="buy-note"></div>
+      </div>
       <div id="concerts-section" style="display:none">
         <div class="section-title"><span data-i18n="upcoming">Prossimi concerti</span> <span id="concerts-count" style="color:var(--text3);font-weight:400"></span></div>
         <div class="concert-list" id="concert-list"></div>
@@ -511,7 +533,7 @@ const I18N = {
     search:'Search artist, title, catalog…', decade:'Decade', sortCat:'Catalog', sortYear:'Year', sortArtist:'Artist', sortTitle:'Title', sortNext:'Next concert',
     noResults:'No results', tryOther:'Try different search terms', purchaseDate:'Purchase date',
     upcoming:'Upcoming concerts', sourceNote:'Dates from the {link} calendar. Always check the organizer\'s website.',
-    related:'Related albums', musicians:'Musicians', noCredits:'Credits not available', extLinks:'External links',
+    related:'Related albums', buyTitle:'Where to find it', buyNote:'Affiliate links: if you buy, Nordicgrund may earn a small commission at no cost to you.', newTitle:'New releases', buyUsed:'used', buyNew:'new', musicians:'Musicians', noCredits:'Credits not available', extLinks:'External links',
     btnOwned:'✓ Owned', btnAdd:'+ Add', btnWishOn:'♡ On wishlist', quickOwned:'My collection', quickZoom:'Enlarge',
     tribute:'tribute', withNames:'with {names}', moreOne:'Show the other concert', moreN:'Show the other {n} concerts',
     liveDot:'A musician on this record is performing live',
@@ -530,7 +552,7 @@ const I18N = {
     search:'Cerca artista, titolo, catalogo…', decade:'Decade', sortCat:'Catalogo', sortYear:'Anno', sortArtist:'Artista', sortTitle:'Titolo', sortNext:'Prossimo concerto',
     noResults:'Nessun risultato', tryOther:'Prova con altri termini di ricerca', purchaseDate:'Data di acquisto',
     upcoming:'Prossimi concerti', sourceNote:'Date dal calendario di {link}. Verifica sempre sul sito dell\'organizzatore.',
-    related:'Album collegati', musicians:'Musicisti', noCredits:'Crediti non disponibili', extLinks:'Link esterni',
+    related:'Album collegati', buyTitle:'Dove trovarlo', buyNote:'Link affiliati: se acquisti, Nordicgrund può ricevere una piccola commissione, senza costi per te.', newTitle:'Nuove uscite', buyUsed:'usato', buyNew:'nuovo', musicians:'Musicisti', noCredits:'Crediti non disponibili', extLinks:'Link esterni',
     btnOwned:'✓ Posseduto', btnAdd:'+ Aggiungi', btnWishOn:'♡ In wishlist', quickOwned:'La mia collezione', quickZoom:'Ingrandisci',
     tribute:'omaggio', withNames:'con {names}', moreOne:'Mostra l\'altro concerto', moreN:'Mostra gli altri {n} concerti',
     liveDot:'Un musicista di questo disco è in concerto',
@@ -549,7 +571,7 @@ const I18N = {
     search:'Rechercher artiste, titre, catalogue…', decade:'Décennie', sortCat:'Catalogue', sortYear:'Année', sortArtist:'Artiste', sortTitle:'Titre', sortNext:'Prochain concert',
     noResults:'Aucun résultat', tryOther:'Essayez d\'autres termes de recherche', purchaseDate:'Date d\'achat',
     upcoming:'Prochains concerts', sourceNote:'Dates issues du calendrier de {link}. Vérifiez toujours sur le site de l\'organisateur.',
-    related:'Albums liés', musicians:'Musiciens', noCredits:'Crédits non disponibles', extLinks:'Liens externes',
+    related:'Albums liés', buyTitle:'Où le trouver', buyNote:'Liens affiliés : si vous achetez, Nordicgrund peut recevoir une petite commission, sans frais pour vous.', newTitle:'Nouveautés', buyUsed:'occasion', buyNew:'neuf', musicians:'Musiciens', noCredits:'Crédits non disponibles', extLinks:'Liens externes',
     btnOwned:'✓ Possédé', btnAdd:'+ Ajouter', btnWishOn:'♡ Dans la liste', quickOwned:'Ma collection', quickZoom:'Agrandir',
     tribute:'hommage', withNames:'avec {names}', moreOne:'Afficher l\'autre concert', moreN:'Afficher les {n} autres concerts',
     liveDot:'Un musicien de ce disque est en concert',
@@ -568,7 +590,7 @@ const I18N = {
     search:'Künstler, Titel, Katalog suchen…', decade:'Jahrzehnt', sortCat:'Katalog', sortYear:'Jahr', sortArtist:'Künstler', sortTitle:'Titel', sortNext:'Nächstes Konzert',
     noResults:'Keine Ergebnisse', tryOther:'Versuchen Sie andere Suchbegriffe', purchaseDate:'Kaufdatum',
     upcoming:'Kommende Konzerte', sourceNote:'Termine aus dem Kalender von {link}. Bitte immer auf der Website des Veranstalters prüfen.',
-    related:'Verwandte Alben', musicians:'Musiker', noCredits:'Credits nicht verfügbar', extLinks:'Externe Links',
+    related:'Verwandte Alben', buyTitle:'Wo erhältlich', buyNote:'Affiliate-Links: Wenn Sie kaufen, erhält Nordicgrund eventuell eine kleine Provision, ohne Kosten für Sie.', newTitle:'Neuerscheinungen', buyUsed:'gebraucht', buyNew:'neu', musicians:'Musiker', noCredits:'Credits nicht verfügbar', extLinks:'Externe Links',
     btnOwned:'✓ Im Besitz', btnAdd:'+ Hinzufügen', btnWishOn:'♡ Auf der Wunschliste', quickOwned:'Meine Sammlung', quickZoom:'Vergrößern',
     tribute:'Hommage', withNames:'mit {names}', moreOne:'Das andere Konzert anzeigen', moreN:'Die anderen {n} Konzerte anzeigen',
     liveDot:'Ein Musiker dieser Platte spielt live',
@@ -587,7 +609,7 @@ const I18N = {
     search:'Buscar artista, título, catálogo…', decade:'Década', sortCat:'Catálogo', sortYear:'Año', sortArtist:'Artista', sortTitle:'Título', sortNext:'Próximo concierto',
     noResults:'Sin resultados', tryOther:'Prueba con otros términos de búsqueda', purchaseDate:'Fecha de compra',
     upcoming:'Próximos conciertos', sourceNote:'Fechas del calendario de {link}. Comprueba siempre en la web del organizador.',
-    related:'Álbumes relacionados', musicians:'Músicos', noCredits:'Créditos no disponibles', extLinks:'Enlaces externos',
+    related:'Álbumes relacionados', buyTitle:'Dónde encontrarlo', buyNote:'Enlaces de afiliado: si compras, Nordicgrund puede recibir una pequeña comisión, sin coste para ti.', newTitle:'Novedades', buyUsed:'usado', buyNew:'nuevo', musicians:'Músicos', noCredits:'Créditos no disponibles', extLinks:'Enlaces externos',
     btnOwned:'✓ En mi colección', btnAdd:'+ Añadir', btnWishOn:'♡ En la lista', quickOwned:'Mi colección', quickZoom:'Ampliar',
     tribute:'homenaje', withNames:'con {names}', moreOne:'Mostrar el otro concierto', moreN:'Mostrar los otros {n} conciertos',
     liveDot:'Un músico de este disco actúa en directo',
@@ -1022,6 +1044,7 @@ function applyFilters() {
   document.getElementById('content').style.display = livePage ? 'none' : '';
   if (livePage) renderLivePage();
   sortFiltered();
+  renderNewStrip(!livePage && currentView === 'all' && !currentArtist && !words.length && activeDecade === null);
   if (!livePage) renderGrid();
   updateInfo();
   updateNavActive();
@@ -1753,6 +1776,58 @@ function renderArtistConcerts(showAll) {
 // ═══════════════════════════════════════════════════════════
 //  DETAIL PANEL
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  DOVE TROVARLO (link affiliati)
+//  Inserire qui i codici ricevuti dai programmi: finché sono vuoti i link
+//  funzionano come semplici ricerche, senza commissione.
+// ═══════════════════════════════════════════════════════════
+//  Ogni valore e' la parte di indirizzo che il programma aggiunge ai suoi link,
+//  copiata dal generatore di link del programma (senza "?" o "&" iniziale).
+const AFF = {
+  ebay:    '',   // es. 'mkcid=1&mkrid=...&campid=...&toolid=10001&mkevt=1' (eBay Partner Network)
+  amazon:  '',   // es. 'tag=nordicgrund-21' (Amazon.it)
+  cdandlp: '',   // parametro indicato da CDandLP
+  juno:    ''    // parametro indicato da Juno Records
+};
+function buyQuery(a) {
+  const artist = (a.artist || '').split(/\s*[\/,]\s*/)[0];
+  return `${artist} ${a.title || ''}`.replace(/\s+/g, ' ').trim();
+}
+function buyLinks(a) {
+  const q = encodeURIComponent(buyQuery(a) + ' ECM');
+  const qa = encodeURIComponent(buyQuery(a));
+  const add = (url, extra) => extra ? url + (url.includes('?') ? '&' : '?') + extra : url;
+  return [
+    { name: 'eBay', kind: 'buyUsed', url: add(`https://www.ebay.it/sch/i.html?_nkw=${q}`, AFF.ebay) },
+    { name: 'CDandLP', kind: 'buyUsed', url: add(`https://www.cdandlp.com/en/search/?q=${qa}`, AFF.cdandlp) },
+    { name: 'Amazon', kind: 'buyNew', url: add(`https://www.amazon.it/s?k=${q}&i=popular`, AFF.amazon) },
+    { name: 'Juno', kind: 'buyNew', url: add(`https://www.juno.co.uk/search/?q%5Ball%5D%5B%5D=${qa}`, AFF.juno) },
+    { name: 'Discogs', kind: '', url: `https://www.discogs.com/search/?q=${qa}&type=release` }
+  ];
+}
+function renderBuy(a) {
+  document.getElementById('buy-links').innerHTML = buyLinks(a).map(l =>
+    `<a href="${esc(l.url)}" target="_blank" rel="sponsored noopener">${esc(l.name)}${l.kind ? `<small>${esc(t(l.kind))}</small>` : ''}</a>`).join('');
+  const anyAff = Object.values(AFF).some(Boolean);
+  document.getElementById('buy-note').textContent = anyAff ? t('buyNote') : '';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NUOVE USCITE: gli ultimi numeri di catalogo ECM, in cima alla vista "Tutto"
+// ═══════════════════════════════════════════════════════════
+function catNum(a) { const m = /^ECM\s*(\d{4})/i.exec(a.catalog || ''); return m ? parseInt(m[1], 10) : 0; }
+function renderNewStrip(show) {
+  const box = document.getElementById('new-strip');
+  if (!show) { box.style.display = 'none'; return; }
+  const owned = getOwned();
+  const list = ALBUMS.filter(catNum).sort((x, y) => catNum(y) - catNum(x)).slice(0, 14);
+  box.innerHTML = `<div class="section-title">${esc(t('newTitle'))}</div><div class="new-row">` + list.map(a =>
+    `<div class="new-item${owned[a.id] ? ' owned' : ''}" onclick="openDetail('${esc(a.id)}')" title="${esc(a.artist + ' – ' + a.title)}">` +
+    `<div class="new-cover">${a.cover_url ? `<img src="${esc(thumbUrl(a.cover_url))}" loading="lazy" alt="" onerror="if(this.src!=='${esc(a.cover_url)}')this.src='${esc(a.cover_url)}'">` : esc(a.catalog)}</div>` +
+    `<div class="nt">${esc(a.title)}</div><div class="na">${esc(a.artist)} · ${esc(a.year)}</div></div>`).join('') + `</div>`;
+  box.style.display = '';
+}
+
 function openDetail(id) {
   openAlbum = ALBUMS.find(a => a.id === id);
   if (!openAlbum) return;
@@ -1779,6 +1854,7 @@ function renderDetail() {
   document.getElementById('detail-year').textContent      = a.year || '';
   document.getElementById('detail-musicians').textContent = a.musicians || '';
   document.getElementById('detail-notes').textContent     = a.notes || '';
+  renderBuy(a);
 
   const img = document.getElementById('detail-cover-img');
   if (a.cover_url) {
